@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self';">
+  <title>Video Compressor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="titlebar-drag"></div>
+    <div class="titlebar-title">
+      <span class="app-icon">🎬</span>
+      Video Compressor
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>輸出設定</h2>
+      </div>
+      
+      <div class="settings-group">
+        <label class="setting-label">輸出格式</label>
+        <div class="select-wrapper">
+          <select id="outputFormat" class="select-input">
+            <option value="mp4">MP4 (H.264/H.265)</option>
+            <option value="webm">WebM (VP9)</option>
+            <option value="mkv">MKV (通用容器)</option>
+            <option value="avi">AVI (相容性最高)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="setting-label">編碼器</label>
+        <div class="select-wrapper">
+          <select id="videoCodec" class="select-input">
+            <option value="h265">H.265 (HEVC) - 最佳壓縮</option>
+            <option value="h264">H.264 - 相容性好</option>
+            <option value="vp9">VP9 - 網頁用</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="setting-label">
+          壓縮品質
+          <span class="quality-value" id="crfValue">23</span>
+        </label>
+        <input type="range" id="crfSlider" class="slider" min="18" max="32" value="23">
+        <div class="slider-labels">
+          <span>高畫質</span>
+          <span>小檔案</span>
+        </div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="setting-label">編碼速度</label>
+        <div class="select-wrapper">
+          <select id="encodingPreset" class="select-input">
+            <option value="ultrafast">極快 (較大檔案)</option>
+            <option value="fast">快速</option>
+            <option value="medium" selected>平衡</option>
+            <option value="slow">慢速 (較小檔案)</option>
+            <option value="veryslow">極慢 (最小檔案)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="settings-group">
+        <label class="setting-label checkbox-label">
+          <input type="checkbox" id="copyAudio" checked>
+          <span class="checkbox-custom"></span>
+          保持原始音訊
+        </label>
+      </div>
+      
+      <div class="settings-divider"></div>
+      
+      <div class="quality-presets">
+        <label class="setting-label">快速預設</label>
+        <div class="preset-buttons">
+          <button class="preset-btn" data-crf="20" data-preset="slow">
+            <span class="preset-icon">✨</span>
+            高畫質
+          </button>
+          <button class="preset-btn active" data-crf="25" data-preset="medium">
+            <span class="preset-icon">⚖️</span>
+            平衡
+          </button>
+          <button class="preset-btn" data-crf="30" data-preset="fast">
+            <span class="preset-icon">📦</span>
+            小檔案
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-content">
+          <div class="drop-icon">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h3>拖放影片檔案到這裡</h3>
+          <p>或點擊下方按鈕選擇檔案</p>
+          <button class="btn btn-primary" id="selectFilesBtn">
+            <span class="btn-icon">📁</span>
+            選擇檔案
+          </button>
+          <div class="supported-formats">
+            支援格式：MOV, MP4, MPG, WMV, WebM, AVI, MKV, FLV, M4V, 3GP
+          </div>
+        </div>
+      </div>
+
+      <!-- File List -->
+      <div class="file-list-container" id="fileListContainer">
+        <div class="file-list-header">
+          <h3>待處理檔案 <span class="file-count" id="fileCount">0</span></h3>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="clearAllBtn">
+              <span class="btn-icon">🗑️</span>
+              清除全部
+            </button>
+            <button class="btn btn-primary" id="startConvertBtn" disabled>
+              <span class="btn-icon">🚀</span>
+              開始轉檔
+            </button>
+          </div>
+        </div>
+        <div class="file-list" id="fileList">
+          <!-- File items will be added here -->
+        </div>
+      </div>
+
+      <!-- Progress Panel -->
+      <div class="progress-panel hidden" id="progressPanel">
+        <div class="progress-header">
+          <h3>轉檔進度</h3>
+          <button class="btn btn-danger" id="cancelBtn">
+            <span class="btn-icon">✖</span>
+            取消
+          </button>
+        </div>
+        <div class="current-file" id="currentFileInfo">
+          <div class="file-name">正在處理...</div>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar">
+            <div class="progress-fill"></div>
+          </div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+        <div class="progress-details" id="progressDetails">
+          <span class="detail-item">
+            <span class="detail-label">速度:</span>
+            <span class="detail-value" id="progressSpeed">--</span>
+          </span>
+          <span class="detail-item">
+            <span class="detail-label">時間:</span>
+            <span class="detail-value" id="progressTime">--</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="results-panel hidden" id="resultsPanel">
+        <div class="results-header">
+          <h3>轉檔完成</h3>
+          <button class="btn btn-secondary" id="newConversionBtn">
+            <span class="btn-icon">➕</span>
+            新增檔案
+          </button>
+        </div>
+        <div class="results-list" id="resultsList">
+          <!-- Results will be added here -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
