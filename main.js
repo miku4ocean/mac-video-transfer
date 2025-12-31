@@ -19,7 +19,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#0a0a0f',
+    backgroundColor: '#f8f9fb',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -28,7 +28,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  
+
   // Open DevTools in development
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
@@ -73,7 +73,7 @@ ipcMain.handle('save-file-dialog', async (event, defaultName, format) => {
     mkv: ['mkv'],
     avi: ['avi']
   };
-  
+
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName,
     filters: [
@@ -91,10 +91,10 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
         reject(err);
         return;
       }
-      
+
       const videoStream = metadata.streams.find(s => s.codec_type === 'video');
       const audioStream = metadata.streams.find(s => s.codec_type === 'audio');
-      
+
       const info = {
         duration: metadata.format.duration,
         size: metadata.format.size,
@@ -114,7 +114,7 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
           bitrate: audioStream.bit_rate
         } : null
       };
-      
+
       resolve(info);
     });
   });
@@ -123,10 +123,10 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
 // Convert video
 ipcMain.handle('convert-video', async (event, options) => {
   const { inputPath, outputPath, settings } = options;
-  
+
   return new Promise((resolve, reject) => {
     let command = ffmpeg(inputPath);
-    
+
     // Video codec settings
     if (settings.codec === 'h265') {
       command = command.videoCodec('libx265');
@@ -135,30 +135,31 @@ ipcMain.handle('convert-video', async (event, options) => {
       command = command.videoCodec('libx264');
     } else if (settings.codec === 'vp9') {
       command = command.videoCodec('libvpx-vp9');
+      command = command.addOption('-b:v', '0'); // Required for CRF mode in VP9
     }
-    
+
     // Quality (CRF)
     command = command.addOption('-crf', settings.crf.toString());
-    
+
     // Preset (encoding speed vs compression)
     if (settings.codec !== 'vp9') {
       command = command.addOption('-preset', settings.preset || 'medium');
     }
-    
+
     // Audio settings
     if (settings.copyAudio) {
       command = command.audioCodec('copy');
     } else {
       command = command.audioCodec('aac').audioBitrate('192k');
     }
-    
+
     // Maintain resolution (no scaling)
     // Only add scale filter if explicitly requested
     if (settings.maxWidth || settings.maxHeight) {
       const scaleFilter = `scale='min(${settings.maxWidth || 'iw'},iw)':'min(${settings.maxHeight || 'ih'},ih)':force_original_aspect_ratio=decrease`;
       command = command.videoFilters(scaleFilter);
     }
-    
+
     // Output format specific options
     const ext = path.extname(outputPath).toLowerCase();
     if (ext === '.mp4') {
@@ -168,13 +169,13 @@ ipcMain.handle('convert-video', async (event, options) => {
     } else if (ext === '.mkv') {
       command = command.format('matroska');
     }
-    
+
     // Progress reporting
     command.on('start', (commandLine) => {
       console.log('FFmpeg command:', commandLine);
       mainWindow.webContents.send('conversion-started', { inputPath, outputPath });
     });
-    
+
     command.on('progress', (progress) => {
       mainWindow.webContents.send('conversion-progress', {
         inputPath,
@@ -183,7 +184,7 @@ ipcMain.handle('convert-video', async (event, options) => {
         speed: progress.currentFps
       });
     });
-    
+
     command.on('end', () => {
       // Get output file size
       const stats = fs.statSync(outputPath);
@@ -193,13 +194,13 @@ ipcMain.handle('convert-video', async (event, options) => {
         outputSize: stats.size
       });
     });
-    
+
     command.on('error', (err, stdout, stderr) => {
       console.error('FFmpeg error:', err);
       console.error('FFmpeg stderr:', stderr);
       reject(err);
     });
-    
+
     currentProcess = command;
     command.save(outputPath);
   });

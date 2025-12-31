@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Test videos
+test_videos/
+
 # Build output
 dist/
 out/
