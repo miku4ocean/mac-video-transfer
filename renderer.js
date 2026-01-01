@@ -31,6 +31,8 @@ const elements = {
     videoCodec: document.getElementById('videoCodec'),
     crfSlider: document.getElementById('crfSlider'),
     crfValue: document.getElementById('crfValue'),
+    qualitySettingsGroup: document.getElementById('qualitySettingsGroup'),
+    qualityOverrideHint: document.getElementById('qualityOverrideHint'),
     audioMode: document.getElementById('audioMode'),
 
     // Resize settings
@@ -668,11 +670,24 @@ elements.resizeHeight.addEventListener('input', () => {
 
 // Target size toggle
 elements.enableTargetSize.addEventListener('change', () => {
-    if (elements.enableTargetSize.checked) {
+    const isEnabled = elements.enableTargetSize.checked;
+
+    if (isEnabled) {
         elements.targetSizeOptions.classList.remove('hidden');
+        // Disable quality slider when target size is set
+        elements.crfSlider.disabled = true;
+        elements.qualitySettingsGroup.classList.add('disabled');
+        elements.qualityOverrideHint.classList.remove('hidden');
+        elements.crfValue.textContent = '--';
     } else {
         elements.targetSizeOptions.classList.add('hidden');
+        // Re-enable quality slider
+        elements.crfSlider.disabled = false;
+        elements.qualitySettingsGroup.classList.remove('disabled');
+        elements.qualityOverrideHint.classList.add('hidden');
+        elements.crfValue.textContent = elements.crfSlider.value;
     }
+
     if (state.files.length > 0) {
         updateFileList();
     }

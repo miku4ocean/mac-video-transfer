@@ -188,6 +188,15 @@ body {
   border-radius: var(--radius-sm);
 }
 
+.quality-override-hint {
+  font-size: 11px;
+  color: var(--warning);
+  margin-top: var(--spacing-xs);
+  padding: 4px 8px;
+  background: var(--warning-light);
+  border-radius: var(--radius-sm);
+}
+
 /* Select Input */
 .select-wrapper {
   position: relative;
@@ -265,6 +274,21 @@ body {
   justify-content: space-between;
   margin-top: var(--spacing-xs);
   font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Disabled state for settings group */
+.settings-group.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.settings-group.disabled .slider {
+  cursor: not-allowed;
+}
+
+.settings-group.disabled .quality-value {
+  background: var(--border-color);
   color: var(--text-muted);
 }
 
