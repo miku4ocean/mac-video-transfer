@@ -4,6 +4,7 @@
 const state = {
     files: [],          // Array of file objects with info
     isConverting: false,
+    isLoading: false,
     currentFileIndex: 0,
     results: []
 };
@@ -15,6 +16,7 @@ const elements = {
     // Drop zone
     dropZone: document.getElementById('dropZone'),
     selectFilesBtn: document.getElementById('selectFilesBtn'),
+    loadingOverlay: document.getElementById('loadingOverlay'),
 
     // File list
     fileListContainer: document.getElementById('fileListContainer'),
@@ -30,6 +32,18 @@ const elements = {
     crfValue: document.getElementById('crfValue'),
     encodingPreset: document.getElementById('encodingPreset'),
     copyAudio: document.getElementById('copyAudio'),
+
+    // Resize settings
+    enableResize: document.getElementById('enableResize'),
+    resizeOptions: document.getElementById('resizeOptions'),
+    resizeWidth: document.getElementById('resizeWidth'),
+    resizeHeight: document.getElementById('resizeHeight'),
+
+    // Target size settings
+    enableTargetSize: document.getElementById('enableTargetSize'),
+    targetSizeOptions: document.getElementById('targetSizeOptions'),
+    targetSizeValue: document.getElementById('targetSizeValue'),
+    targetSizeUnit: document.getElementById('targetSizeUnit'),
 
     // Progress
     progressPanel: document.getElementById('progressPanel'),
@@ -97,6 +111,16 @@ function getFileExtension(filePath) {
     return filePath.split('.').pop().toLowerCase();
 }
 
+function getTimestamp() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    return `${year}${month}${day}${hours}${mins}`;
+}
+
 function showToast(message, type = 'info') {
     const icons = {
         success: '✓',
@@ -120,10 +144,51 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// Estimate compressed size based on CRF and codec
+function estimateCompressedSize(originalSize, crf, codec) {
+    // Based on test results:
+    // H.265 CRF 20: 62.8% compression, CRF 25: 75.8%, CRF 30: 87.1%
+    // H.264 CRF 20: 72.0% compression, CRF 25: 83.8%, CRF 30: 92.4%
+
+    let baseCompression;
+    if (codec === 'h265') {
+        // Linear interpolation for H.265
+        if (crf <= 20) baseCompression = 0.628;
+        else if (crf <= 25) baseCompression = 0.628 + (crf - 20) * (0.758 - 0.628) / 5;
+        else if (crf <= 30) baseCompression = 0.758 + (crf - 25) * (0.871 - 0.758) / 5;
+        else baseCompression = 0.90;
+    } else if (codec === 'h264') {
+        // Linear interpolation for H.264
+        if (crf <= 20) baseCompression = 0.72;
+        else if (crf <= 25) baseCompression = 0.72 + (crf - 20) * (0.838 - 0.72) / 5;
+        else if (crf <= 30) baseCompression = 0.838 + (crf - 25) * (0.924 - 0.838) / 5;
+        else baseCompression = 0.95;
+    } else {
+        // VP9 similar to H.265
+        if (crf <= 25) baseCompression = 0.70;
+        else if (crf <= 30) baseCompression = 0.80;
+        else baseCompression = 0.88;
+    }
+
+    const estimatedSize = originalSize * (1 - baseCompression);
+    return estimatedSize;
+}
+
+function showLoading(show) {
+    state.isLoading = show;
+    if (show) {
+        elements.loadingOverlay.classList.remove('hidden');
+    } else {
+        elements.loadingOverlay.classList.add('hidden');
+    }
+}
+
 // ========================================
 // File Handling
 // ========================================
 async function addFiles(filePaths) {
+    showLoading(true);
+
     for (const filePath of filePaths) {
         // Check if already added
         if (state.files.find(f => f.path === filePath)) {
@@ -145,6 +210,7 @@ async function addFiles(filePaths) {
         }
     }
 
+    showLoading(false);
     updateFileList();
 }
 
@@ -172,7 +238,14 @@ function updateFileList() {
     elements.fileListContainer.classList.remove('hidden');
     elements.dropZone.style.display = 'none';
 
-    elements.fileList.innerHTML = state.files.map((file, index) => `
+    const crf = parseInt(elements.crfSlider.value);
+    const codec = elements.videoCodec.value;
+
+    elements.fileList.innerHTML = state.files.map((file, index) => {
+        const estimatedSize = estimateCompressedSize(file.info.size, crf, codec);
+        const compressionPercent = ((1 - estimatedSize / file.info.size) * 100).toFixed(0);
+
+        return `
     <div class="file-item" data-index="${index}">
       <div class="file-icon">${getFileIcon(file.extension)}</div>
       <div class="file-info">
@@ -182,12 +255,18 @@ function updateFileList() {
           <span>📦 ${formatBytes(file.info.size)}</span>
           <span>⏱️ ${formatDuration(file.info.duration)}</span>
         </div>
+        <div class="file-estimate">
+          <span class="estimate-label">預估壓縮後:</span>
+          <span class="estimate-value">${formatBytes(estimatedSize)}</span>
+          <span class="estimate-percent">(節省 ${compressionPercent}%)</span>
+        </div>
       </div>
       <div class="file-actions">
         <button class="file-action-btn remove" title="移除" onclick="removeFile(${index})">🗑️</button>
       </div>
     </div>
-  `).join('');
+  `;
+    }).join('');
 }
 
 // ========================================
@@ -213,6 +292,27 @@ async function startConversion() {
         copyAudio: elements.copyAudio.checked
     };
 
+    // Resize settings
+    if (elements.enableResize.checked) {
+        const width = parseInt(elements.resizeWidth.value);
+        const height = parseInt(elements.resizeHeight.value);
+        if (width) settings.maxWidth = width;
+        if (height) settings.maxHeight = height;
+    }
+
+    // Target size settings
+    if (elements.enableTargetSize.checked) {
+        const sizeValue = parseFloat(elements.targetSizeValue.value);
+        const sizeUnit = elements.targetSizeUnit.value;
+        if (sizeValue) {
+            let targetBytes = sizeValue;
+            if (sizeUnit === 'KB') targetBytes *= 1024;
+            else if (sizeUnit === 'MB') targetBytes *= 1024 * 1024;
+            else if (sizeUnit === 'GB') targetBytes *= 1024 * 1024 * 1024;
+            settings.targetSize = targetBytes;
+        }
+    }
+
     const outputFormat = elements.outputFormat.value;
 
     // Process each file
@@ -227,10 +327,13 @@ async function startConversion() {
       <div class="file-name">正在處理: ${file.name} (${i + 1}/${state.files.length})</div>
     `;
 
-        // Generate output path
+        // Generate output filename with timestamp
         const baseName = file.name.replace(/\.[^/.]+$/, '');
+        const timestamp = getTimestamp();
+        const outputFileName = `${baseName}_${timestamp}.${outputFormat}`;
+
         const outputPath = await window.api.saveFileDialog(
-            `${baseName}_compressed.${outputFormat}`,
+            outputFileName,
             outputFormat
         );
 
@@ -326,11 +429,11 @@ function showResults() {
           </div>
         </div>
         <div class="result-actions">
-          <button class="btn btn-sm btn-secondary" onclick="window.api.openFile('${result.outputPath.replace(/'/g, "\\'")}')">
+          <button class="btn btn-sm btn-secondary" data-action="play" data-path="${result.outputPath}">
             <span class="btn-icon">▶️</span>
             播放
           </button>
-          <button class="btn btn-sm btn-secondary" onclick="window.api.showInFolder('${result.outputPath.replace(/'/g, "\\'")}')">
+          <button class="btn btn-sm btn-secondary" data-action="folder" data-path="${result.outputPath}">
             <span class="btn-icon">📁</span>
             開啟資料夾
           </button>
@@ -338,6 +441,19 @@ function showResults() {
       </div>
     `;
     }).join('');
+
+    // Attach event listeners to result buttons
+    document.querySelectorAll('.result-actions button').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const action = btn.dataset.action;
+            const path = btn.dataset.path;
+            if (action === 'play') {
+                await window.api.openFile(path);
+            } else if (action === 'folder') {
+                await window.api.showInFolder(path);
+            }
+        });
+    });
 }
 
 function startNewConversion() {
@@ -399,7 +515,7 @@ document.addEventListener('dragover', (e) => {
 document.addEventListener('drop', async (e) => {
     e.preventDefault();
 
-    if (state.isConverting) return;
+    if (state.isConverting || state.isLoading) return;
 
     const files = Array.from(e.dataTransfer.files);
     const validExtensions = ['mov', 'mp4', 'mpg', 'mpeg', 'wmv', 'webm', 'avi', 'mkv', 'flv', 'm4v', '3gp'];
@@ -412,9 +528,19 @@ document.addEventListener('drop', async (e) => {
     }
 });
 
-// CRF slider
+// CRF slider - update file list to show new estimates
 elements.crfSlider.addEventListener('input', (e) => {
     elements.crfValue.textContent = e.target.value;
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Codec change - update file list to show new estimates
+elements.videoCodec.addEventListener('change', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
 });
 
 // Preset buttons
@@ -429,6 +555,10 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
         elements.crfSlider.value = crf;
         elements.crfValue.textContent = crf;
         elements.encodingPreset.value = preset;
+
+        if (state.files.length > 0) {
+            updateFileList();
+        }
     });
 });
 
@@ -439,6 +569,27 @@ elements.outputFormat.addEventListener('change', () => {
         elements.videoCodec.value = 'vp9';
     } else if (elements.videoCodec.value === 'vp9') {
         elements.videoCodec.value = 'h265';
+    }
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Resize toggle
+elements.enableResize.addEventListener('change', () => {
+    if (elements.enableResize.checked) {
+        elements.resizeOptions.classList.remove('hidden');
+    } else {
+        elements.resizeOptions.classList.add('hidden');
+    }
+});
+
+// Target size toggle
+elements.enableTargetSize.addEventListener('change', () => {
+    if (elements.enableTargetSize.checked) {
+        elements.targetSizeOptions.classList.remove('hidden');
+    } else {
+        elements.targetSizeOptions.classList.add('hidden');
     }
 });
 

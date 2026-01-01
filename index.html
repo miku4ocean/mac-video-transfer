@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self';">
   <title>Video Compressor</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <!-- Titlebar -->
   <div class="titlebar">
@@ -25,19 +28,17 @@
       <div class="sidebar-header">
         <h2>輸出設定</h2>
       </div>
-      
+
       <div class="settings-group">
         <label class="setting-label">輸出格式</label>
         <div class="select-wrapper">
           <select id="outputFormat" class="select-input">
             <option value="mp4">MP4 (H.264/H.265)</option>
             <option value="webm">WebM (VP9)</option>
-            <option value="mkv">MKV (通用容器)</option>
-            <option value="avi">AVI (相容性最高)</option>
           </select>
         </div>
       </div>
-      
+
       <div class="settings-group">
         <label class="setting-label">編碼器</label>
         <div class="select-wrapper">
@@ -48,7 +49,7 @@
           </select>
         </div>
       </div>
-      
+
       <div class="settings-group">
         <label class="setting-label">
           壓縮品質
@@ -60,7 +61,7 @@
           <span>小檔案</span>
         </div>
       </div>
-      
+
       <div class="settings-group">
         <label class="setting-label">編碼速度</label>
         <div class="select-wrapper">
@@ -73,7 +74,7 @@
           </select>
         </div>
       </div>
-      
+
       <div class="settings-group">
         <label class="setting-label checkbox-label">
           <input type="checkbox" id="copyAudio" checked>
@@ -81,9 +82,48 @@
           保持原始音訊
         </label>
       </div>
-      
+
+      <div class="settings-group">
+        <label class="setting-label checkbox-label">
+          <input type="checkbox" id="enableResize">
+          <span class="checkbox-custom"></span>
+          調整影像尺寸
+        </label>
+        <div class="resize-options hidden" id="resizeOptions">
+          <div class="input-row">
+            <div class="input-group">
+              <label>寬度</label>
+              <input type="number" id="resizeWidth" class="number-input" placeholder="自動" min="100" max="7680">
+            </div>
+            <span class="input-separator">×</span>
+            <div class="input-group">
+              <label>高度</label>
+              <input type="number" id="resizeHeight" class="number-input" placeholder="自動" min="100" max="4320">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <label class="setting-label checkbox-label">
+          <input type="checkbox" id="enableTargetSize">
+          <span class="checkbox-custom"></span>
+          壓縮至限定大小以下
+        </label>
+        <div class="target-size-options hidden" id="targetSizeOptions">
+          <div class="input-row">
+            <input type="number" id="targetSizeValue" class="number-input wide" placeholder="500" min="1">
+            <select id="targetSizeUnit" class="select-input small">
+              <option value="MB" selected>MB</option>
+              <option value="GB">GB</option>
+              <option value="KB">KB</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="settings-divider"></div>
-      
+
       <div class="quality-presets">
         <label class="setting-label">快速預設</label>
         <div class="preset-buttons">
@@ -110,9 +150,9 @@
         <div class="drop-zone-content">
           <div class="drop-icon">
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </div>
           <h3>拖放影片檔案到這裡</h3>
@@ -127,8 +167,14 @@
         </div>
       </div>
 
+      <!-- Loading Overlay -->
+      <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>正在讀取檔案資訊...</p>
+      </div>
+
       <!-- File List -->
-      <div class="file-list-container" id="fileListContainer">
+      <div class="file-list-container hidden" id="fileListContainer">
         <div class="file-list-header">
           <h3>待處理檔案 <span class="file-count" id="fileCount">0</span></h3>
           <div class="header-actions">
@@ -198,4 +244,5 @@
 
   <script src="renderer.js"></script>
 </body>
+
 </html>

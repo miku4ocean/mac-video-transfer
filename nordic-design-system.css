@@ -1,0 +1,736 @@
+/**
+ * Nordic Design System
+ * 北歐銀白色系設計系統
+ * 
+ * 這是一個可重用的設計系統，提供一致的 UI 風格。
+ * 使用方式：在你的專案中引入此檔案，然後使用定義的 CSS 變數。
+ * 
+ * @author miku4ocean
+ * @version 1.0.0
+ * @license MIT
+ */
+
+/* ========================================
+   1. CSS Variables - 設計標記
+   ======================================== */
+:root {
+    /* ----------------------------------------
+     Colors - 顏色系統
+     ---------------------------------------- */
+
+    /* 背景色 */
+    --nordic-bg-primary: #f8f9fb;
+    /* 主要背景 */
+    --nordic-bg-secondary: #ffffff;
+    /* 次要背景 (卡片) */
+    --nordic-bg-tertiary: #f0f2f5;
+    /* 第三層背景 (輸入框) */
+    --nordic-bg-hover: #e8eaef;
+    /* 懸停狀態 */
+
+    /* 強調色 */
+    --nordic-accent-primary: #5a6a7a;
+    /* 主要強調色 */
+    --nordic-accent-secondary: #8a9aaa;
+    /* 次要強調色 */
+    --nordic-accent-light: #a8b8c8;
+    /* 淺色強調 */
+    --nordic-accent-dark: #3a4a5a;
+    /* 深色強調 */
+
+    /* 語義色彩 */
+    --nordic-success: #4a9a7c;
+    /* 成功/綠色 */
+    --nordic-success-light: rgba(74, 154, 124, 0.1);
+    --nordic-warning: #c89a4a;
+    /* 警告/黃色 */
+    --nordic-warning-light: rgba(200, 154, 74, 0.1);
+    --nordic-danger: #c45a5a;
+    /* 危險/紅色 */
+    --nordic-danger-light: rgba(196, 90, 90, 0.1);
+    --nordic-info: #5a8ac4;
+    /* 資訊/藍色 */
+    --nordic-info-light: rgba(90, 138, 196, 0.1);
+
+    /* 文字色彩 */
+    --nordic-text-primary: #2a3a4a;
+    /* 主要文字 */
+    --nordic-text-secondary: #5a6a7a;
+    /* 次要文字 */
+    --nordic-text-muted: #8a9aaa;
+    /* 淡色文字 */
+    --nordic-text-inverse: #ffffff;
+    /* 反色文字 */
+
+    /* 邊框色彩 */
+    --nordic-border-color: #e0e4e8;
+    /* 標準邊框 */
+    --nordic-border-light: #d0d4d8;
+    /* 深色邊框 */
+
+    /* ----------------------------------------
+     Spacing - 間距系統
+     ---------------------------------------- */
+    --nordic-spacing-xs: 4px;
+    --nordic-spacing-sm: 8px;
+    --nordic-spacing-md: 16px;
+    --nordic-spacing-lg: 24px;
+    --nordic-spacing-xl: 32px;
+    --nordic-spacing-2xl: 48px;
+    --nordic-spacing-3xl: 64px;
+
+    /* ----------------------------------------
+     Border Radius - 圓角系統
+     ---------------------------------------- */
+    --nordic-radius-none: 0;
+    --nordic-radius-sm: 6px;
+    --nordic-radius-md: 10px;
+    --nordic-radius-lg: 14px;
+    --nordic-radius-xl: 20px;
+    --nordic-radius-2xl: 28px;
+    --nordic-radius-full: 9999px;
+
+    /* ----------------------------------------
+     Typography - 字型系統
+     ---------------------------------------- */
+    --nordic-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --nordic-font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+    /* 字型大小 */
+    --nordic-font-size-xs: 11px;
+    --nordic-font-size-sm: 12px;
+    --nordic-font-size-base: 14px;
+    --nordic-font-size-md: 16px;
+    --nordic-font-size-lg: 18px;
+    --nordic-font-size-xl: 20px;
+    --nordic-font-size-2xl: 24px;
+    --nordic-font-size-3xl: 32px;
+
+    /* 字重 */
+    --nordic-font-weight-light: 300;
+    --nordic-font-weight-normal: 400;
+    --nordic-font-weight-medium: 500;
+    --nordic-font-weight-semibold: 600;
+    --nordic-font-weight-bold: 700;
+
+    /* 行高 */
+    --nordic-line-height-tight: 1.25;
+    --nordic-line-height-normal: 1.5;
+    --nordic-line-height-relaxed: 1.75;
+
+    /* ----------------------------------------
+     Shadows - 陰影系統
+     ---------------------------------------- */
+    --nordic-shadow-xs: 0 1px 2px rgba(42, 58, 74, 0.04);
+    --nordic-shadow-sm: 0 2px 8px rgba(42, 58, 74, 0.06);
+    --nordic-shadow-md: 0 4px 16px rgba(42, 58, 74, 0.08);
+    --nordic-shadow-lg: 0 8px 32px rgba(42, 58, 74, 0.1);
+    --nordic-shadow-xl: 0 16px 48px rgba(42, 58, 74, 0.12);
+    --nordic-shadow-inner: inset 0 1px 3px rgba(42, 58, 74, 0.05);
+
+    /* ----------------------------------------
+     Transitions - 過渡動畫
+     ---------------------------------------- */
+    --nordic-transition-fast: 0.15s ease;
+    --nordic-transition-normal: 0.25s ease;
+    --nordic-transition-slow: 0.4s ease;
+    --nordic-transition-spring: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    /* ----------------------------------------
+     Z-Index - 層級系統
+     ---------------------------------------- */
+    --nordic-z-dropdown: 100;
+    --nordic-z-sticky: 200;
+    --nordic-z-overlay: 300;
+    --nordic-z-modal: 400;
+    --nordic-z-popover: 500;
+    --nordic-z-toast: 600;
+}
+
+/* ========================================
+   2. Base Styles - 基礎樣式
+   ======================================== */
+
+/* Reset */
+.nordic-reset *,
+.nordic-reset *::before,
+.nordic-reset *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Base Body */
+.nordic-app {
+    font-family: var(--nordic-font-family);
+    font-size: var(--nordic-font-size-base);
+    line-height: var(--nordic-line-height-normal);
+    color: var(--nordic-text-primary);
+    background: var(--nordic-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   3. Component Classes - 元件類別
+   ======================================== */
+
+/* ----------------------------------------
+   Buttons - 按鈕
+   ---------------------------------------- */
+.nordic-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--nordic-spacing-sm);
+    padding: 10px 20px;
+    font-size: var(--nordic-font-size-base);
+    font-weight: var(--nordic-font-weight-medium);
+    font-family: inherit;
+    border-radius: var(--nordic-radius-md);
+    cursor: pointer;
+    transition: all var(--nordic-transition-fast);
+    border: none;
+    text-decoration: none;
+}
+
+.nordic-btn-primary {
+    background: var(--nordic-accent-primary);
+    color: var(--nordic-text-inverse);
+    box-shadow: var(--nordic-shadow-sm);
+}
+
+.nordic-btn-primary:hover {
+    background: var(--nordic-accent-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--nordic-shadow-md);
+}
+
+.nordic-btn-secondary {
+    background: var(--nordic-bg-tertiary);
+    color: var(--nordic-text-secondary);
+    border: 1px solid var(--nordic-border-color);
+}
+
+.nordic-btn-secondary:hover {
+    background: var(--nordic-bg-hover);
+    border-color: var(--nordic-border-light);
+    color: var(--nordic-text-primary);
+}
+
+.nordic-btn-success {
+    background: var(--nordic-success);
+    color: var(--nordic-text-inverse);
+}
+
+.nordic-btn-danger {
+    background: var(--nordic-danger);
+    color: var(--nordic-text-inverse);
+}
+
+.nordic-btn-sm {
+    padding: 6px 12px;
+    font-size: var(--nordic-font-size-sm);
+}
+
+.nordic-btn-lg {
+    padding: 14px 28px;
+    font-size: var(--nordic-font-size-md);
+}
+
+.nordic-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ----------------------------------------
+   Cards - 卡片
+   ---------------------------------------- */
+.nordic-card {
+    background: var(--nordic-bg-secondary);
+    border-radius: var(--nordic-radius-lg);
+    border: 1px solid var(--nordic-border-color);
+    box-shadow: var(--nordic-shadow-sm);
+    overflow: hidden;
+}
+
+.nordic-card-header {
+    padding: var(--nordic-spacing-md) var(--nordic-spacing-lg);
+    background: var(--nordic-bg-secondary);
+    border-bottom: 1px solid var(--nordic-border-color);
+}
+
+.nordic-card-body {
+    padding: var(--nordic-spacing-lg);
+}
+
+.nordic-card-footer {
+    padding: var(--nordic-spacing-md) var(--nordic-spacing-lg);
+    background: var(--nordic-bg-tertiary);
+    border-top: 1px solid var(--nordic-border-color);
+}
+
+/* ----------------------------------------
+   Inputs - 輸入框
+   ---------------------------------------- */
+.nordic-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--nordic-bg-tertiary);
+    border: 1px solid var(--nordic-border-color);
+    border-radius: var(--nordic-radius-md);
+    color: var(--nordic-text-primary);
+    font-size: var(--nordic-font-size-sm);
+    font-family: inherit;
+    transition: all var(--nordic-transition-fast);
+}
+
+.nordic-input:hover {
+    border-color: var(--nordic-border-light);
+    background: var(--nordic-bg-hover);
+}
+
+.nordic-input:focus {
+    outline: none;
+    border-color: var(--nordic-accent-primary);
+    box-shadow: 0 0 0 3px rgba(90, 106, 122, 0.15);
+}
+
+.nordic-input::placeholder {
+    color: var(--nordic-text-muted);
+}
+
+/* ----------------------------------------
+   Select - 下拉選單
+   ---------------------------------------- */
+.nordic-select-wrapper {
+    position: relative;
+}
+
+.nordic-select-wrapper::after {
+    content: '▼';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--nordic-text-muted);
+    pointer-events: none;
+}
+
+.nordic-select {
+    width: 100%;
+    padding: 10px 32px 10px 12px;
+    background: var(--nordic-bg-tertiary);
+    border: 1px solid var(--nordic-border-color);
+    border-radius: var(--nordic-radius-md);
+    color: var(--nordic-text-primary);
+    font-size: var(--nordic-font-size-sm);
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    transition: all var(--nordic-transition-fast);
+}
+
+.nordic-select:hover {
+    border-color: var(--nordic-border-light);
+    background: var(--nordic-bg-hover);
+}
+
+.nordic-select:focus {
+    outline: none;
+    border-color: var(--nordic-accent-primary);
+    box-shadow: 0 0 0 3px rgba(90, 106, 122, 0.15);
+}
+
+/* ----------------------------------------
+   Checkbox - 核取方塊
+   ---------------------------------------- */
+.nordic-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--nordic-spacing-sm);
+    cursor: pointer;
+}
+
+.nordic-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.nordic-checkbox-box {
+    width: 20px;
+    height: 20px;
+    background: var(--nordic-bg-tertiary);
+    border: 1px solid var(--nordic-border-color);
+    border-radius: var(--nordic-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--nordic-transition-fast);
+}
+
+.nordic-checkbox-box::after {
+    content: '✓';
+    font-size: 12px;
+    color: white;
+    opacity: 0;
+    transition: opacity var(--nordic-transition-fast);
+}
+
+.nordic-checkbox input:checked+.nordic-checkbox-box {
+    background: var(--nordic-accent-primary);
+    border-color: var(--nordic-accent-primary);
+}
+
+.nordic-checkbox input:checked+.nordic-checkbox-box::after {
+    opacity: 1;
+}
+
+/* ----------------------------------------
+   Slider - 滑桿
+   ---------------------------------------- */
+.nordic-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--nordic-bg-tertiary);
+    border-radius: var(--nordic-radius-full);
+    border: 1px solid var(--nordic-border-color);
+    outline: none;
+}
+
+.nordic-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--nordic-bg-secondary);
+    border: 2px solid var(--nordic-accent-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: var(--nordic-shadow-sm);
+    transition: all var(--nordic-transition-fast);
+}
+
+.nordic-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    border-color: var(--nordic-accent-dark);
+}
+
+/* ----------------------------------------
+   Badges - 標籤
+   ---------------------------------------- */
+.nordic-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: var(--nordic-font-size-xs);
+    font-weight: var(--nordic-font-weight-medium);
+    border-radius: var(--nordic-radius-full);
+}
+
+.nordic-badge-primary {
+    background: var(--nordic-accent-primary);
+    color: var(--nordic-text-inverse);
+}
+
+.nordic-badge-success {
+    background: var(--nordic-success-light);
+    color: var(--nordic-success);
+}
+
+.nordic-badge-warning {
+    background: var(--nordic-warning-light);
+    color: var(--nordic-warning);
+}
+
+.nordic-badge-danger {
+    background: var(--nordic-danger-light);
+    color: var(--nordic-danger);
+}
+
+/* ----------------------------------------
+   Toast Notifications - 通知
+   ---------------------------------------- */
+.nordic-toast-container {
+    position: fixed;
+    bottom: var(--nordic-spacing-lg);
+    right: var(--nordic-spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--nordic-spacing-sm);
+    z-index: var(--nordic-z-toast);
+    pointer-events: none;
+}
+
+.nordic-toast {
+    padding: var(--nordic-spacing-md) var(--nordic-spacing-lg);
+    background: var(--nordic-bg-secondary);
+    border: 1px solid var(--nordic-border-color);
+    border-radius: var(--nordic-radius-md);
+    box-shadow: var(--nordic-shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--nordic-spacing-sm);
+    animation: nordic-slideIn 0.3s ease;
+    pointer-events: auto;
+}
+
+.nordic-toast-success {
+    border-color: var(--nordic-success);
+    background: linear-gradient(135deg, var(--nordic-success-light), var(--nordic-bg-secondary));
+}
+
+.nordic-toast-error {
+    border-color: var(--nordic-danger);
+    background: linear-gradient(135deg, var(--nordic-danger-light), var(--nordic-bg-secondary));
+}
+
+.nordic-toast-warning {
+    border-color: var(--nordic-warning);
+    background: linear-gradient(135deg, var(--nordic-warning-light), var(--nordic-bg-secondary));
+}
+
+@keyframes nordic-slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ----------------------------------------
+   Loading Spinner - 載入動畫
+   ---------------------------------------- */
+.nordic-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--nordic-border-color);
+    border-top-color: var(--nordic-accent-primary);
+    border-radius: 50%;
+    animation: nordic-spin 1s linear infinite;
+}
+
+.nordic-spinner-lg {
+    width: 48px;
+    height: 48px;
+}
+
+@keyframes nordic-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ----------------------------------------
+   Progress Bar - 進度條
+   ---------------------------------------- */
+.nordic-progress {
+    height: 12px;
+    background: var(--nordic-bg-tertiary);
+    border-radius: var(--nordic-radius-full);
+    overflow: hidden;
+    border: 1px solid var(--nordic-border-color);
+}
+
+.nordic-progress-fill {
+    height: 100%;
+    background: var(--nordic-accent-primary);
+    border-radius: var(--nordic-radius-full);
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.nordic-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%);
+    animation: nordic-shimmer 2s infinite;
+}
+
+@keyframes nordic-shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ========================================
+   4. Utility Classes - 工具類別
+   ======================================== */
+
+/* Text Colors */
+.nordic-text-primary {
+    color: var(--nordic-text-primary);
+}
+
+.nordic-text-secondary {
+    color: var(--nordic-text-secondary);
+}
+
+.nordic-text-muted {
+    color: var(--nordic-text-muted);
+}
+
+.nordic-text-success {
+    color: var(--nordic-success);
+}
+
+.nordic-text-danger {
+    color: var(--nordic-danger);
+}
+
+.nordic-text-warning {
+    color: var(--nordic-warning);
+}
+
+/* Background Colors */
+.nordic-bg-primary {
+    background: var(--nordic-bg-primary);
+}
+
+.nordic-bg-secondary {
+    background: var(--nordic-bg-secondary);
+}
+
+.nordic-bg-tertiary {
+    background: var(--nordic-bg-tertiary);
+}
+
+/* Spacing - Margin */
+.nordic-m-0 {
+    margin: 0;
+}
+
+.nordic-m-sm {
+    margin: var(--nordic-spacing-sm);
+}
+
+.nordic-m-md {
+    margin: var(--nordic-spacing-md);
+}
+
+.nordic-m-lg {
+    margin: var(--nordic-spacing-lg);
+}
+
+/* Spacing - Padding */
+.nordic-p-0 {
+    padding: 0;
+}
+
+.nordic-p-sm {
+    padding: var(--nordic-spacing-sm);
+}
+
+.nordic-p-md {
+    padding: var(--nordic-spacing-md);
+}
+
+.nordic-p-lg {
+    padding: var(--nordic-spacing-lg);
+}
+
+/* Display */
+.nordic-hidden {
+    display: none !important;
+}
+
+.nordic-flex {
+    display: flex;
+}
+
+.nordic-flex-col {
+    flex-direction: column;
+}
+
+.nordic-items-center {
+    align-items: center;
+}
+
+.nordic-justify-center {
+    justify-content: center;
+}
+
+.nordic-justify-between {
+    justify-content: space-between;
+}
+
+.nordic-gap-sm {
+    gap: var(--nordic-spacing-sm);
+}
+
+.nordic-gap-md {
+    gap: var(--nordic-spacing-md);
+}
+
+.nordic-gap-lg {
+    gap: var(--nordic-spacing-lg);
+}
+
+/* Border Radius */
+.nordic-rounded-sm {
+    border-radius: var(--nordic-radius-sm);
+}
+
+.nordic-rounded-md {
+    border-radius: var(--nordic-radius-md);
+}
+
+.nordic-rounded-lg {
+    border-radius: var(--nordic-radius-lg);
+}
+
+.nordic-rounded-full {
+    border-radius: var(--nordic-radius-full);
+}
+
+/* Shadows */
+.nordic-shadow-sm {
+    box-shadow: var(--nordic-shadow-sm);
+}
+
+.nordic-shadow-md {
+    box-shadow: var(--nordic-shadow-md);
+}
+
+.nordic-shadow-lg {
+    box-shadow: var(--nordic-shadow-lg);
+}
+
+/* ========================================
+   5. Scrollbar Styles - 捲軸樣式
+   ======================================== */
+.nordic-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.nordic-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.nordic-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--nordic-border-light);
+    border-radius: var(--nordic-radius-full);
+}
+
+.nordic-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--nordic-text-muted);
+}
