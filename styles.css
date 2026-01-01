@@ -1081,6 +1081,25 @@ body {
   font-weight: 500;
 }
 
+.file-min-size {
+  font-size: 11px;
+  margin-top: 2px;
+  padding: 3px 6px;
+  background: var(--warning-light);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  gap: 4px;
+}
+
+.min-size-label {
+  color: var(--text-muted);
+}
+
+.min-size-value {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 /* ========================================
    Number Inputs & Input Rows
    ======================================== */

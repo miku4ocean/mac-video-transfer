@@ -310,6 +310,13 @@ function updateFileList() {
         const estimatedSize = estimateCompressedSize(file.info.size, videoWidth, videoHeight, settings);
         const compressionPercent = ((1 - estimatedSize / file.info.size) * 100).toFixed(0);
 
+        // Calculate minimum recommended size based on duration
+        // Minimum: 50kbps video + 128kbps audio = 178kbps total
+        const duration = file.info.duration || 60;
+        const minBitrate = 178000; // 50kbps video + 128kbps audio
+        const minSizeBytes = (minBitrate * duration) / 8;
+        const minSizeMB = (minSizeBytes / 1024 / 1024).toFixed(1);
+
         return `
     <div class="file-item" data-index="${index}">
       <div class="file-icon">${getFileIcon(file.extension)}</div>
@@ -324,6 +331,10 @@ function updateFileList() {
           <span class="estimate-label">預估壓縮後:</span>
           <span class="estimate-value">${formatBytes(estimatedSize)}</span>
           <span class="estimate-percent">(節省 ${compressionPercent}%)</span>
+        </div>
+        <div class="file-min-size">
+          <span class="min-size-label">限定大小模式最小:</span>
+          <span class="min-size-value">${minSizeMB} MB</span>
         </div>
       </div>
       <div class="file-actions">
