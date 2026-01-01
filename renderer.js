@@ -164,8 +164,8 @@ function getCurrentSettings() {
     };
 }
 
-// Estimate compressed size based on quality and codec
-// VideoToolbox uses quality scale 1-100, higher = better quality = larger file
+// Estimate compressed size based on quality percentage
+// Quality is now a percentage of original bitrate (100% = same size, 50% = half size)
 function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings) {
     const { quality, codec, audioMode, enableResize, resizeWidth, resizeHeight, enableTargetSize, targetSize, targetSizeUnit } = settings;
 
@@ -188,21 +188,11 @@ function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings)
         resizeFactor = Math.min(1, newPixels / originalPixels);
     }
 
-    // Base compression ratio based on quality (20-80 scale)
-    // Quality 20 = ~90% compression, Quality 50 = ~60% compression, Quality 80 = ~20% compression
-    let baseCompression;
-    if (codec.includes('h265') || codec === 'vp9') {
-        // H.265/VP9 is more efficient
-        // Quality 20 -> 90% reduction, Quality 50 -> 60% reduction, Quality 80 -> 15% reduction
-        baseCompression = 0.90 - ((quality - 20) / 60) * 0.75;
-    } else {
-        // H.264
-        // Quality 20 -> 85% reduction, Quality 50 -> 55% reduction, Quality 80 -> 10% reduction
-        baseCompression = 0.85 - ((quality - 20) / 60) * 0.75;
-    }
-
-    // Clamp compression ratio
-    baseCompression = Math.max(0.10, Math.min(0.90, baseCompression));
+    // Quality is now a direct percentage of original bitrate
+    // quality 100 = 100% of original = same size
+    // quality 50 = 50% of original = half size
+    // quality 10 = 10% of original = very small
+    const qualityFactor = quality / 100;
 
     // Audio factor
     let audioFactor = 1;
@@ -212,7 +202,13 @@ function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings)
         audioFactor = 0.95; // Slight reduction
     }
 
-    const estimatedSize = originalSize * (1 - baseCompression) * resizeFactor * audioFactor;
+    // H.265 is ~30% more efficient than H.264 at same bitrate
+    let codecEfficiency = 1;
+    if (codec.includes('h265') || codec === 'vp9') {
+        codecEfficiency = 0.7; // 30% smaller for same quality
+    }
+
+    const estimatedSize = originalSize * qualityFactor * resizeFactor * audioFactor * codecEfficiency;
     return Math.max(estimatedSize, originalSize * 0.05); // Minimum 5% of original
 }
 
@@ -680,7 +676,7 @@ document.addEventListener('drop', async (e) => {
 
 // Quality slider
 elements.crfSlider.addEventListener('input', (e) => {
-    elements.crfValue.textContent = e.target.value;
+    elements.crfValue.textContent = e.target.value + '%';
     if (state.files.length > 0) {
         updateFileList();
     }
@@ -742,7 +738,7 @@ elements.enableTargetSize.addEventListener('change', () => {
         elements.crfSlider.disabled = false;
         elements.qualitySettingsGroup.classList.remove('disabled');
         elements.qualityOverrideHint.classList.add('hidden');
-        elements.crfValue.textContent = elements.crfSlider.value;
+        elements.crfValue.textContent = elements.crfSlider.value + '%';
     }
 
     if (state.files.length > 0) {
@@ -773,7 +769,7 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
         const codec = btn.dataset.codec;
 
         elements.crfSlider.value = quality;
-        elements.crfValue.textContent = quality;
+        elements.crfValue.textContent = quality + '%';
         elements.videoCodec.value = codec;
 
         if (state.files.length > 0) {

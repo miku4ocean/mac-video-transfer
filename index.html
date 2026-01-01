@@ -55,13 +55,13 @@
 
       <div class="settings-group" id="qualitySettingsGroup">
         <label class="setting-label">
-          壓縮品質
-          <span class="quality-value" id="crfValue">50</span>
+          壓縮品質 (相對原始位元率)
+          <span class="quality-value" id="crfValue">50%</span>
         </label>
-        <input type="range" id="crfSlider" class="slider" min="20" max="80" value="50">
+        <input type="range" id="crfSlider" class="slider" min="10" max="100" value="50">
         <div class="slider-labels">
-          <span>小檔案</span>
-          <span>高畫質</span>
+          <span>最小檔案 (10%)</span>
+          <span>原始品質 (100%)</span>
         </div>
         <div class="quality-override-hint hidden" id="qualityOverrideHint">
           ⚠️ 品質由目標大小自動計算
@@ -123,17 +123,17 @@
       <div class="quality-presets">
         <label class="setting-label">快速預設</label>
         <div class="preset-buttons">
-          <button class="preset-btn" data-quality="65" data-codec="h265_hw">
+          <button class="preset-btn" data-quality="75" data-codec="h265_hw">
             <span class="preset-icon">✨</span>
-            高畫質
+            高畫質 (75%)
           </button>
           <button class="preset-btn active" data-quality="50" data-codec="h265_hw">
             <span class="preset-icon">⚖️</span>
-            平衡
+            平衡 (50%)
           </button>
-          <button class="preset-btn" data-quality="35" data-codec="h265_hw">
+          <button class="preset-btn" data-quality="25" data-codec="h265_hw">
             <span class="preset-icon">📦</span>
-            小檔案
+            小檔案 (25%)
           </button>
         </div>
       </div>
