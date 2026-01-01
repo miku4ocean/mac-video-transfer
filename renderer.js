@@ -183,21 +183,21 @@ function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings)
         resizeFactor = Math.min(1, newPixels / originalPixels);
     }
 
-    // Base compression ratio based on quality (30-90 scale)
-    // Quality 30 = ~95% compression, Quality 90 = ~30% compression
+    // Base compression ratio based on quality (20-80 scale)
+    // Quality 20 = ~90% compression, Quality 50 = ~60% compression, Quality 80 = ~20% compression
     let baseCompression;
     if (codec.includes('h265') || codec === 'vp9') {
         // H.265/VP9 is more efficient
-        // Quality 30 -> 95% reduction, Quality 60 -> 70% reduction, Quality 90 -> 25% reduction
-        baseCompression = 0.95 - ((quality - 30) / 60) * 0.70;
+        // Quality 20 -> 90% reduction, Quality 50 -> 60% reduction, Quality 80 -> 15% reduction
+        baseCompression = 0.90 - ((quality - 20) / 60) * 0.75;
     } else {
         // H.264
-        // Quality 30 -> 90% reduction, Quality 60 -> 60% reduction, Quality 90 -> 20% reduction
-        baseCompression = 0.90 - ((quality - 30) / 60) * 0.70;
+        // Quality 20 -> 85% reduction, Quality 50 -> 55% reduction, Quality 80 -> 10% reduction
+        baseCompression = 0.85 - ((quality - 20) / 60) * 0.75;
     }
 
     // Clamp compression ratio
-    baseCompression = Math.max(0.15, Math.min(0.95, baseCompression));
+    baseCompression = Math.max(0.10, Math.min(0.90, baseCompression));
 
     // Audio factor
     let audioFactor = 1;
@@ -508,19 +508,28 @@ function renderResultsList() {
       </div>
     `;
     }).join('');
+}
 
-    // Attach event listeners to result buttons
-    document.querySelectorAll('.result-actions button').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const action = btn.dataset.action;
-            if (action === 'play') {
-                await window.api.openFile(btn.dataset.path);
-            } else if (action === 'folder') {
-                await window.api.showInFolder(btn.dataset.path);
-            } else if (action === 'remove') {
-                removeResult(parseInt(btn.dataset.index));
-            }
-        });
+// Use event delegation for result actions - attach once to resultsList
+function initResultsEventListeners() {
+    elements.resultsList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const action = btn.dataset.action;
+        const path = btn.dataset.path;
+        const index = btn.dataset.index;
+
+        if (action === 'play' && path) {
+            await window.api.openFile(path);
+        } else if (action === 'folder' && path) {
+            await window.api.showInFolder(path);
+        } else if (action === 'remove' && index !== undefined) {
+            removeResult(parseInt(index));
+        }
     });
 }
 
@@ -726,4 +735,5 @@ window.removeFile = removeFile;
 // ========================================
 // Initialization
 // ========================================
+initResultsEventListeners();
 console.log('Video Compressor loaded with hardware acceleration support');
