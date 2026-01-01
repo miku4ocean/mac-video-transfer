@@ -122,58 +122,124 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
 ipcMain.handle('convert-video', async (event, options) => {
   const { inputPath, outputPath, settings } = options;
 
+  // First, get video info to calculate target bitrate if needed
+  const videoInfo = await new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) reject(err);
+      else resolve(metadata);
+    });
+  });
+
+  const duration = videoInfo.format.duration; // in seconds
+  const audioStream = videoInfo.streams.find(s => s.codec_type === 'audio');
+  const audioBitrate = audioStream ? parseInt(audioStream.bit_rate) || 128000 : 0; // default 128kbps if unknown
+
   return new Promise((resolve, reject) => {
     let command = ffmpeg(inputPath);
 
+    // Calculate target video bitrate if targetSize is specified
+    let useTargetBitrate = false;
+    let targetVideoBitrate = 0;
+
+    if (settings.targetSize && settings.targetSize > 0 && duration > 0) {
+      // targetSize is in bytes
+      // Total bitrate = targetSize * 8 / duration (bits per second)
+      // Video bitrate = Total bitrate - Audio bitrate
+      // Add 5% safety margin to ensure we stay under target
+      const totalBitrate = (settings.targetSize * 8) / duration;
+      const audioSafeBitrate = settings.audioMode === 'mute' ? 0 :
+        settings.audioMode === 'compress' ? 128000 :
+          audioBitrate;
+      targetVideoBitrate = Math.floor((totalBitrate - audioSafeBitrate) * 0.95);
+
+      // Minimum bitrate to maintain some quality
+      if (targetVideoBitrate > 100000) { // At least 100kbps
+        useTargetBitrate = true;
+        console.log(`Target size: ${(settings.targetSize / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`Duration: ${duration.toFixed(2)}s`);
+        console.log(`Calculated video bitrate: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
+      }
+    }
+
     // Video codec settings - with hardware acceleration support
-    switch (settings.codec) {
-      case 'h265_hw':
-        // Use VideoToolbox hardware acceleration for H.265/HEVC
-        command = command.videoCodec('hevc_videotoolbox');
-        command = command.addOption('-tag:v', 'hvc1'); // For better compatibility
-        // Quality setting for VideoToolbox (1-100, higher = better quality)
-        command = command.addOption('-q:v', settings.quality.toString());
-        break;
+    if (useTargetBitrate) {
+      // When targeting specific size, use bitrate control instead of quality
+      switch (settings.codec) {
+        case 'h265_hw':
+          command = command.videoCodec('hevc_videotoolbox');
+          command = command.addOption('-tag:v', 'hvc1');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+          break;
 
-      case 'h264_hw':
-        // Use VideoToolbox hardware acceleration for H.264
-        command = command.videoCodec('h264_videotoolbox');
-        // Quality setting for VideoToolbox (1-100, higher = better quality)
-        command = command.addOption('-q:v', settings.quality.toString());
-        break;
+        case 'h264_hw':
+          command = command.videoCodec('h264_videotoolbox');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+          break;
 
-      case 'h265':
-        // Software H.265 encoding (slower but more efficient)
-        command = command.videoCodec('libx265');
-        command = command.addOption('-tag:v', 'hvc1');
-        // Convert quality (30-90) to CRF (28-18) - inverted scale
-        const h265Crf = Math.round(28 - ((settings.quality - 30) / 60) * 10);
-        command = command.addOption('-crf', h265Crf.toString());
-        command = command.addOption('-preset', 'medium');
-        break;
+        case 'h265':
+          command = command.videoCodec('libx265');
+          command = command.addOption('-tag:v', 'hvc1');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-preset', 'medium');
+          break;
 
-      case 'h264':
-        // Software H.264 encoding (slower)
-        command = command.videoCodec('libx264');
-        // Convert quality (30-90) to CRF (28-18) - inverted scale
-        const h264Crf = Math.round(28 - ((settings.quality - 30) / 60) * 10);
-        command = command.addOption('-crf', h264Crf.toString());
-        command = command.addOption('-preset', 'medium');
-        break;
+        case 'h264':
+          command = command.videoCodec('libx264');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-preset', 'medium');
+          break;
 
-      case 'vp9':
-        command = command.videoCodec('libvpx-vp9');
-        command = command.addOption('-b:v', '0'); // Required for CRF mode in VP9
-        // Convert quality (30-90) to CRF (40-20) - inverted scale
-        const vp9Crf = Math.round(40 - ((settings.quality - 30) / 60) * 20);
-        command = command.addOption('-crf', vp9Crf.toString());
-        break;
+        case 'vp9':
+          command = command.videoCodec('libvpx-vp9');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+          break;
 
-      default:
-        // Default to hardware H.265
-        command = command.videoCodec('hevc_videotoolbox');
-        command = command.addOption('-tag:v', 'hvc1');
-        command = command.addOption('-q:v', settings.quality.toString());
+        default:
+          command = command.videoCodec('hevc_videotoolbox');
+          command = command.addOption('-tag:v', 'hvc1');
+          command = command.addOption('-b:v', targetVideoBitrate.toString());
+      }
+    } else {
+      // Use quality-based encoding (original logic)
+      switch (settings.codec) {
+        case 'h265_hw':
+          command = command.videoCodec('hevc_videotoolbox');
+          command = command.addOption('-tag:v', 'hvc1');
+          command = command.addOption('-q:v', settings.quality.toString());
+          break;
+
+        case 'h264_hw':
+          command = command.videoCodec('h264_videotoolbox');
+          command = command.addOption('-q:v', settings.quality.toString());
+          break;
+
+        case 'h265':
+          command = command.videoCodec('libx265');
+          command = command.addOption('-tag:v', 'hvc1');
+          const h265Crf = Math.round(28 - ((settings.quality - 20) / 60) * 10);
+          command = command.addOption('-crf', h265Crf.toString());
+          command = command.addOption('-preset', 'medium');
+          break;
+
+        case 'h264':
+          command = command.videoCodec('libx264');
+          const h264Crf = Math.round(28 - ((settings.quality - 20) / 60) * 10);
+          command = command.addOption('-crf', h264Crf.toString());
+          command = command.addOption('-preset', 'medium');
+          break;
+
+        case 'vp9':
+          command = command.videoCodec('libvpx-vp9');
+          command = command.addOption('-b:v', '0');
+          const vp9Crf = Math.round(40 - ((settings.quality - 20) / 60) * 20);
+          command = command.addOption('-crf', vp9Crf.toString());
+          break;
+
+        default:
+          command = command.videoCodec('hevc_videotoolbox');
+          command = command.addOption('-tag:v', 'hvc1');
+          command = command.addOption('-q:v', settings.quality.toString());
+      }
     }
 
     // Audio settings
