@@ -57,6 +57,7 @@ const elements = {
     resultsPanel: document.getElementById('resultsPanel'),
     resultsList: document.getElementById('resultsList'),
     newConversionBtn: document.getElementById('newConversionBtn'),
+    clearResultsBtn: document.getElementById('clearResultsBtn'),
 
     // Toast
     toastContainer: document.getElementById('toastContainer')
@@ -225,6 +226,12 @@ function showLoading(show) {
 async function addFiles(filePaths) {
     showLoading(true);
 
+    // Clear previous results when adding new files
+    if (state.results.length > 0) {
+        state.results = [];
+        elements.resultsPanel.classList.add('hidden');
+    }
+
     for (const filePath of filePaths) {
         // Check if already added
         if (state.files.find(f => f.path === filePath)) {
@@ -258,6 +265,22 @@ function removeFile(index) {
 function clearAllFiles() {
     state.files = [];
     updateFileList();
+}
+
+function removeResult(index) {
+    state.results.splice(index, 1);
+    if (state.results.length === 0) {
+        elements.resultsPanel.classList.add('hidden');
+        elements.dropZone.style.display = 'flex';
+    } else {
+        renderResultsList();
+    }
+}
+
+function clearAllResults() {
+    state.results = [];
+    elements.resultsPanel.classList.add('hidden');
+    elements.dropZone.style.display = 'flex';
 }
 
 function updateFileList() {
@@ -427,16 +450,23 @@ function showResults() {
     const successCount = state.results.filter(r => r.success).length;
     showToast(`完成! ${successCount}/${state.results.length} 個檔案成功轉換`, 'success');
 
+    renderResultsList();
+}
+
+function renderResultsList() {
     elements.resultsList.innerHTML = state.results.map((result, index) => {
         if (!result.success) {
             return `
-        <div class="result-item error">
+        <div class="result-item error" data-index="${index}">
           <div class="result-icon" style="background: linear-gradient(135deg, var(--danger), #dc2626)">❌</div>
           <div class="result-info">
             <div class="result-name">${result.inputName}</div>
             <div class="result-stats">
               <span class="stat-item" style="color: var(--danger)">${result.error || '轉檔失敗'}</span>
             </div>
+          </div>
+          <div class="result-actions">
+            <button class="file-action-btn remove" title="刪除記錄" data-action="remove" data-index="${index}">🗑️</button>
           </div>
         </div>
       `;
@@ -445,7 +475,7 @@ function showResults() {
         const compressionRatio = ((1 - result.outputSize / result.inputSize) * 100).toFixed(1);
 
         return `
-      <div class="result-item">
+      <div class="result-item" data-index="${index}">
         <div class="result-icon">✓</div>
         <div class="result-info">
           <div class="result-name">${result.outputName}</div>
@@ -473,6 +503,7 @@ function showResults() {
             <span class="btn-icon">📁</span>
             開啟資料夾
           </button>
+          <button class="file-action-btn remove" title="刪除記錄" data-action="remove" data-index="${index}">🗑️</button>
         </div>
       </div>
     `;
@@ -482,11 +513,12 @@ function showResults() {
     document.querySelectorAll('.result-actions button').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const action = btn.dataset.action;
-            const path = btn.dataset.path;
             if (action === 'play') {
-                await window.api.openFile(path);
+                await window.api.openFile(btn.dataset.path);
             } else if (action === 'folder') {
-                await window.api.showInFolder(path);
+                await window.api.showInFolder(btn.dataset.path);
+            } else if (action === 'remove') {
+                removeResult(parseInt(btn.dataset.index));
             }
         });
     });
@@ -677,6 +709,7 @@ elements.clearAllBtn.addEventListener('click', clearAllFiles);
 elements.startConvertBtn.addEventListener('click', startConversion);
 elements.cancelBtn.addEventListener('click', cancelConversion);
 elements.newConversionBtn.addEventListener('click', startNewConversion);
+elements.clearResultsBtn.addEventListener('click', clearAllResults);
 
 // IPC event listeners
 window.api.onConversionProgress((data) => {

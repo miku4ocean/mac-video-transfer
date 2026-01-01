@@ -220,10 +220,16 @@
       <div class="results-panel hidden" id="resultsPanel">
         <div class="results-header">
           <h3>轉檔完成</h3>
-          <button class="btn btn-secondary" id="newConversionBtn">
-            <span class="btn-icon">➕</span>
-            新增檔案
-          </button>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="clearResultsBtn">
+              <span class="btn-icon">🗑️</span>
+              清除全部
+            </button>
+            <button class="btn btn-primary" id="newConversionBtn">
+              <span class="btn-icon">➕</span>
+              新增檔案
+            </button>
+          </div>
         </div>
         <div class="results-list" id="resultsList">
           <!-- Results will be added here -->
