@@ -145,11 +145,13 @@ ipcMain.handle('convert-video', async (event, options) => {
       // targetSize is in bytes
       // Total bitrate = targetSize * 8 / duration (bits per second)
       // Video bitrate = Total bitrate - Audio bitrate
-      // Add 5% safety margin to ensure we stay under target
       const totalBitrate = (settings.targetSize * 8) / duration;
+
       // For 'copy' audio mode, use actual audio bitrate from the source
       // For 'compress', use 128kbps; for 'mute', use 0
       let audioSafeBitrate = 0;
+      let effectiveAudioMode = settings.audioMode;
+
       if (settings.audioMode === 'mute') {
         audioSafeBitrate = 0;
       } else if (settings.audioMode === 'compress') {
@@ -164,14 +166,36 @@ ipcMain.handle('convert-video', async (event, options) => {
       console.log(`Target size: ${(settings.targetSize / 1024 / 1024).toFixed(2)} MB`);
       console.log(`Duration: ${duration.toFixed(2)}s`);
       console.log(`Total bitrate needed: ${(totalBitrate / 1000).toFixed(0)} kbps`);
-      console.log(`Audio bitrate: ${(audioSafeBitrate / 1000).toFixed(0)} kbps`);
+      console.log(`Audio bitrate (${effectiveAudioMode}): ${(audioSafeBitrate / 1000).toFixed(0)} kbps`);
       console.log(`Calculated video bitrate: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
 
-      // Minimum bitrate to maintain some quality - lowered to 50kbps
-      if (targetVideoBitrate > 50000) { // At least 50kbps
+      // If video bitrate is too low, try reducing audio quality
+      if (targetVideoBitrate < 50000 && settings.audioMode === 'copy') {
+        console.log('Video bitrate too low, trying compressed audio (128kbps)...');
+        audioSafeBitrate = 128000;
+        effectiveAudioMode = 'compress';
+        targetVideoBitrate = Math.floor((totalBitrate - audioSafeBitrate) * 0.90);
+        console.log(`New video bitrate with compressed audio: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
+      }
+
+      // If still too low, try muting audio
+      if (targetVideoBitrate < 50000 && effectiveAudioMode !== 'mute') {
+        console.log('Still too low, trying mute audio...');
+        audioSafeBitrate = 0;
+        effectiveAudioMode = 'mute';
+        targetVideoBitrate = Math.floor(totalBitrate * 0.90);
+        console.log(`New video bitrate with muted audio: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
+      }
+
+      // Update the effective audio mode in settings
+      settings.audioMode = effectiveAudioMode;
+
+      // Final check - minimum 30kbps for any kind of video
+      if (targetVideoBitrate > 30000) {
         useTargetBitrate = true;
+        console.log(`Final: Using ${(targetVideoBitrate / 1000).toFixed(0)} kbps video, ${effectiveAudioMode} audio`);
       } else {
-        console.log('Warning: Target size too small, video bitrate would be below 50kbps. Using quality mode instead.');
+        console.log('Warning: Target size too small even with no audio. Using quality mode instead.');
       }
     }
 
