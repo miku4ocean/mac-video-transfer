@@ -340,7 +340,7 @@ function updateFileList() {
         </div>
       </div>
       <div class="file-actions">
-        <button class="file-action-btn remove" title="移除" onclick="removeFile(${index})">🗑️</button>
+        <button class="file-action-btn remove" title="移除" data-action="remove-file" data-index="${index}">🗑️</button>
       </div>
     </div>
   `;
@@ -834,11 +834,27 @@ window.api.onConversionProgress((data) => {
     }
 });
 
-// Make removeFile available globally
-window.removeFile = removeFile;
+// Event delegation for file list actions
+function initFileListEventListeners() {
+    elements.fileList.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const action = btn.dataset.action;
+        const index = btn.dataset.index;
+
+        if (action === 'remove-file' && index !== undefined) {
+            removeFile(parseInt(index));
+        }
+    });
+}
 
 // ========================================
 // Initialization
 // ========================================
 initResultsEventListeners();
+initFileListEventListeners();
 console.log('Video Compressor loaded with hardware acceleration support');
