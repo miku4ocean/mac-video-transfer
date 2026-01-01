@@ -1,13 +1,33 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
-const ffprobePath = require('ffprobe-static').path;
 const fs = require('fs');
 
-// Set FFmpeg paths
-ffmpeg.setFfmpegPath(ffmpegPath);
-ffmpeg.setFfprobePath(ffprobePath);
+// Get FFmpeg/FFprobe paths - handle both development and packaged app
+function getFFmpegPath() {
+  if (app.isPackaged) {
+    // In packaged app, ffmpeg-static binaries are in node_modules inside resources
+    const ffmpegPath = require('ffmpeg-static');
+    // Replace app.asar with app.asar.unpacked
+    return ffmpegPath.replace('app.asar', 'app.asar.unpacked');
+  } else {
+    return require('ffmpeg-static');
+  }
+}
+
+function getFFprobePath() {
+  if (app.isPackaged) {
+    const ffprobePath = require('ffprobe-static').path;
+    return ffprobePath.replace('app.asar', 'app.asar.unpacked');
+  } else {
+    return require('ffprobe-static').path;
+  }
+}
+
+// Set FFmpeg paths after app is ready
+let ffmpegPathResolved;
+let ffprobePathResolved;
+
 
 let mainWindow;
 let currentProcess = null;
@@ -34,7 +54,18 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Set FFmpeg paths
+  ffmpegPathResolved = getFFmpegPath();
+  ffprobePathResolved = getFFprobePath();
+  ffmpeg.setFfmpegPath(ffmpegPathResolved);
+  ffmpeg.setFfprobePath(ffprobePathResolved);
+
+  console.log('FFmpeg path:', ffmpegPathResolved);
+  console.log('FFprobe path:', ffprobePathResolved);
+
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
