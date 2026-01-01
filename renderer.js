@@ -567,29 +567,29 @@ async function reconvertFile(inputPath) {
     showLoading(true);
 
     try {
-        const info = await window.api.getVideoInfo(inputPath);
         const fileName = getFileName(inputPath);
 
         // Check if already in queue
         if (state.files.find(f => f.path === inputPath)) {
-            showToast(`${fileName} 已在待處理列表中`, 'warning');
-            showLoading(false);
-            return;
+            showToast(`${fileName} 已在待處理列表中，請調整設定後開始轉檔`, 'info');
+        } else {
+            // Get video info and add to queue
+            const info = await window.api.getVideoInfo(inputPath);
+
+            state.files.push({
+                path: inputPath,
+                name: fileName,
+                extension: getFileExtension(inputPath),
+                info: info
+            });
+
+            showToast(`已加入待處理：${fileName}`, 'success');
         }
 
-        // Add to files queue
-        state.files.push({
-            path: inputPath,
-            name: fileName,
-            extension: getFileExtension(inputPath),
-            info: info
-        });
-
-        // Hide results, show file list
+        // Always switch to file list view
         elements.resultsPanel.classList.add('hidden');
         updateFileList();
 
-        showToast(`已加入待處理：${fileName}`, 'success');
     } catch (error) {
         console.error('Error getting video info:', error);
         showToast(`無法讀取檔案：${getFileName(inputPath)}`, 'error');
@@ -801,8 +801,8 @@ elements.clearResultsBtn.addEventListener('click', clearAllResults);
 // IPC event listeners
 window.api.onConversionProgress((data) => {
     const percent = Math.round(data.percent || 0);
-    elements.progressBar.querySelector('.progress-fill').style.width = `${percent}%`;
-    elements.progressText.textContent = `${percent}%`;
+    elements.progressBar.querySelector('.progress-fill').style.width = `${percent}% `;
+    elements.progressText.textContent = `${percent}% `;
     elements.progressTime.textContent = data.currentTime || '--:--';
     elements.progressSpeed.textContent = data.speed ? `${data.speed} fps` : '--';
 
