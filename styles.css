@@ -179,6 +179,15 @@ body {
   border-radius: var(--radius-sm);
 }
 
+.setting-hint {
+  font-size: 11px;
+  color: var(--success);
+  margin-top: var(--spacing-xs);
+  padding: 4px 8px;
+  background: var(--success-light);
+  border-radius: var(--radius-sm);
+}
+
 /* Select Input */
 .select-wrapper {
   position: relative;

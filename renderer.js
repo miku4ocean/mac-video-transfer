@@ -30,8 +30,7 @@ const elements = {
     videoCodec: document.getElementById('videoCodec'),
     crfSlider: document.getElementById('crfSlider'),
     crfValue: document.getElementById('crfValue'),
-    encodingPreset: document.getElementById('encodingPreset'),
-    copyAudio: document.getElementById('copyAudio'),
+    audioMode: document.getElementById('audioMode'),
 
     // Resize settings
     enableResize: document.getElementById('enableResize'),
@@ -144,34 +143,71 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Estimate compressed size based on CRF and codec
-function estimateCompressedSize(originalSize, crf, codec) {
-    // Based on test results:
-    // H.265 CRF 20: 62.8% compression, CRF 25: 75.8%, CRF 30: 87.1%
-    // H.264 CRF 20: 72.0% compression, CRF 25: 83.8%, CRF 30: 92.4%
+// Get current settings
+function getCurrentSettings() {
+    return {
+        quality: parseInt(elements.crfSlider.value),
+        codec: elements.videoCodec.value,
+        audioMode: elements.audioMode.value,
+        enableResize: elements.enableResize.checked,
+        resizeWidth: parseInt(elements.resizeWidth.value) || null,
+        resizeHeight: parseInt(elements.resizeHeight.value) || null,
+        enableTargetSize: elements.enableTargetSize.checked,
+        targetSize: parseFloat(elements.targetSizeValue.value) || null,
+        targetSizeUnit: elements.targetSizeUnit.value
+    };
+}
 
-    let baseCompression;
-    if (codec === 'h265') {
-        // Linear interpolation for H.265
-        if (crf <= 20) baseCompression = 0.628;
-        else if (crf <= 25) baseCompression = 0.628 + (crf - 20) * (0.758 - 0.628) / 5;
-        else if (crf <= 30) baseCompression = 0.758 + (crf - 25) * (0.871 - 0.758) / 5;
-        else baseCompression = 0.90;
-    } else if (codec === 'h264') {
-        // Linear interpolation for H.264
-        if (crf <= 20) baseCompression = 0.72;
-        else if (crf <= 25) baseCompression = 0.72 + (crf - 20) * (0.838 - 0.72) / 5;
-        else if (crf <= 30) baseCompression = 0.838 + (crf - 25) * (0.924 - 0.838) / 5;
-        else baseCompression = 0.95;
-    } else {
-        // VP9 similar to H.265
-        if (crf <= 25) baseCompression = 0.70;
-        else if (crf <= 30) baseCompression = 0.80;
-        else baseCompression = 0.88;
+// Estimate compressed size based on quality and codec
+// VideoToolbox uses quality scale 1-100, higher = better quality = larger file
+function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings) {
+    const { quality, codec, audioMode, enableResize, resizeWidth, resizeHeight, enableTargetSize, targetSize, targetSizeUnit } = settings;
+
+    // If target size is set, use that
+    if (enableTargetSize && targetSize) {
+        let targetBytes = targetSize;
+        if (targetSizeUnit === 'KB') targetBytes *= 1024;
+        else if (targetSizeUnit === 'MB') targetBytes *= 1024 * 1024;
+        else if (targetSizeUnit === 'GB') targetBytes *= 1024 * 1024 * 1024;
+        return Math.min(targetBytes, originalSize);
     }
 
-    const estimatedSize = originalSize * (1 - baseCompression);
-    return estimatedSize;
+    // Calculate resolution factor if resize is enabled
+    let resizeFactor = 1;
+    if (enableResize && (resizeWidth || resizeHeight)) {
+        const originalPixels = videoWidth * videoHeight;
+        const newWidth = resizeWidth || (videoWidth * (resizeHeight / videoHeight));
+        const newHeight = resizeHeight || (videoHeight * (resizeWidth / videoWidth));
+        const newPixels = newWidth * newHeight;
+        resizeFactor = Math.min(1, newPixels / originalPixels);
+    }
+
+    // Base compression ratio based on quality (30-90 scale)
+    // Quality 30 = ~95% compression, Quality 90 = ~30% compression
+    let baseCompression;
+    if (codec.includes('h265') || codec === 'vp9') {
+        // H.265/VP9 is more efficient
+        // Quality 30 -> 95% reduction, Quality 60 -> 70% reduction, Quality 90 -> 25% reduction
+        baseCompression = 0.95 - ((quality - 30) / 60) * 0.70;
+    } else {
+        // H.264
+        // Quality 30 -> 90% reduction, Quality 60 -> 60% reduction, Quality 90 -> 20% reduction
+        baseCompression = 0.90 - ((quality - 30) / 60) * 0.70;
+    }
+
+    // Clamp compression ratio
+    baseCompression = Math.max(0.15, Math.min(0.95, baseCompression));
+
+    // Audio factor
+    let audioFactor = 1;
+    if (audioMode === 'mute') {
+        audioFactor = 0.9; // Assume audio is ~10% of file
+    } else if (audioMode === 'compress') {
+        audioFactor = 0.95; // Slight reduction
+    }
+
+    const estimatedSize = originalSize * (1 - baseCompression) * resizeFactor * audioFactor;
+    return Math.max(estimatedSize, originalSize * 0.05); // Minimum 5% of original
 }
 
 function showLoading(show) {
@@ -238,11 +274,12 @@ function updateFileList() {
     elements.fileListContainer.classList.remove('hidden');
     elements.dropZone.style.display = 'none';
 
-    const crf = parseInt(elements.crfSlider.value);
-    const codec = elements.videoCodec.value;
+    const settings = getCurrentSettings();
 
     elements.fileList.innerHTML = state.files.map((file, index) => {
-        const estimatedSize = estimateCompressedSize(file.info.size, crf, codec);
+        const videoWidth = file.info.video?.width || 1920;
+        const videoHeight = file.info.video?.height || 1080;
+        const estimatedSize = estimateCompressedSize(file.info.size, videoWidth, videoHeight, settings);
         const compressionPercent = ((1 - estimatedSize / file.info.size) * 100).toFixed(0);
 
         return `
@@ -251,7 +288,7 @@ function updateFileList() {
       <div class="file-info">
         <div class="file-name">${file.name}</div>
         <div class="file-meta">
-          <span>📐 ${file.info.video?.width}×${file.info.video?.height}</span>
+          <span>📐 ${videoWidth}×${videoHeight}</span>
           <span>📦 ${formatBytes(file.info.size)}</span>
           <span>⏱️ ${formatDuration(file.info.duration)}</span>
         </div>
@@ -287,9 +324,8 @@ async function startConversion() {
     // Get settings
     const settings = {
         codec: elements.videoCodec.value,
-        crf: parseInt(elements.crfSlider.value),
-        preset: elements.encodingPreset.value,
-        copyAudio: elements.copyAudio.checked
+        quality: parseInt(elements.crfSlider.value),
+        audioMode: elements.audioMode.value
     };
 
     // Resize settings
@@ -528,7 +564,11 @@ document.addEventListener('drop', async (e) => {
     }
 });
 
-// CRF slider - update file list to show new estimates
+// ========================================
+// Settings change listeners - Update estimates on ANY change
+// ========================================
+
+// Quality slider
 elements.crfSlider.addEventListener('input', (e) => {
     elements.crfValue.textContent = e.target.value;
     if (state.files.length > 0) {
@@ -536,8 +576,65 @@ elements.crfSlider.addEventListener('input', (e) => {
     }
 });
 
-// Codec change - update file list to show new estimates
+// Codec change
 elements.videoCodec.addEventListener('change', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Audio mode change
+elements.audioMode.addEventListener('change', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Resize toggle
+elements.enableResize.addEventListener('change', () => {
+    if (elements.enableResize.checked) {
+        elements.resizeOptions.classList.remove('hidden');
+    } else {
+        elements.resizeOptions.classList.add('hidden');
+    }
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Resize width/height change
+elements.resizeWidth.addEventListener('input', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+elements.resizeHeight.addEventListener('input', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Target size toggle
+elements.enableTargetSize.addEventListener('change', () => {
+    if (elements.enableTargetSize.checked) {
+        elements.targetSizeOptions.classList.remove('hidden');
+    } else {
+        elements.targetSizeOptions.classList.add('hidden');
+    }
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+// Target size value/unit change
+elements.targetSizeValue.addEventListener('input', () => {
+    if (state.files.length > 0) {
+        updateFileList();
+    }
+});
+
+elements.targetSizeUnit.addEventListener('change', () => {
     if (state.files.length > 0) {
         updateFileList();
     }
@@ -549,12 +646,12 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
         document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        const crf = btn.dataset.crf;
-        const preset = btn.dataset.preset;
+        const quality = btn.dataset.quality;
+        const codec = btn.dataset.codec;
 
-        elements.crfSlider.value = crf;
-        elements.crfValue.textContent = crf;
-        elements.encodingPreset.value = preset;
+        elements.crfSlider.value = quality;
+        elements.crfValue.textContent = quality;
+        elements.videoCodec.value = codec;
 
         if (state.files.length > 0) {
             updateFileList();
@@ -568,28 +665,10 @@ elements.outputFormat.addEventListener('change', () => {
     if (format === 'webm') {
         elements.videoCodec.value = 'vp9';
     } else if (elements.videoCodec.value === 'vp9') {
-        elements.videoCodec.value = 'h265';
+        elements.videoCodec.value = 'h265_hw';
     }
     if (state.files.length > 0) {
         updateFileList();
-    }
-});
-
-// Resize toggle
-elements.enableResize.addEventListener('change', () => {
-    if (elements.enableResize.checked) {
-        elements.resizeOptions.classList.remove('hidden');
-    } else {
-        elements.resizeOptions.classList.add('hidden');
-    }
-});
-
-// Target size toggle
-elements.enableTargetSize.addEventListener('change', () => {
-    if (elements.enableTargetSize.checked) {
-        elements.targetSizeOptions.classList.remove('hidden');
-    } else {
-        elements.targetSizeOptions.classList.add('hidden');
     }
 });
 
@@ -614,4 +693,4 @@ window.removeFile = removeFile;
 // ========================================
 // Initialization
 // ========================================
-console.log('Video Compressor loaded');
+console.log('Video Compressor loaded with hardware acceleration support');

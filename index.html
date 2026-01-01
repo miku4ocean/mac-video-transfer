@@ -43,44 +43,37 @@
         <label class="setting-label">編碼器</label>
         <div class="select-wrapper">
           <select id="videoCodec" class="select-input">
-            <option value="h265">H.265 (HEVC) - 最佳壓縮</option>
-            <option value="h264">H.264 - 相容性好</option>
+            <option value="h265_hw">H.265 硬體加速 ⚡ (推薦)</option>
+            <option value="h264_hw">H.264 硬體加速 ⚡</option>
+            <option value="h265">H.265 軟體編碼 (較慢)</option>
+            <option value="h264">H.264 軟體編碼 (較慢)</option>
             <option value="vp9">VP9 - 網頁用</option>
           </select>
         </div>
+        <div class="setting-hint">⚡ 硬體加速比軟體快 10-20 倍</div>
       </div>
 
       <div class="settings-group">
         <label class="setting-label">
           壓縮品質
-          <span class="quality-value" id="crfValue">23</span>
+          <span class="quality-value" id="crfValue">65</span>
         </label>
-        <input type="range" id="crfSlider" class="slider" min="18" max="32" value="23">
+        <input type="range" id="crfSlider" class="slider" min="30" max="90" value="65">
         <div class="slider-labels">
-          <span>高畫質</span>
           <span>小檔案</span>
+          <span>高畫質</span>
         </div>
       </div>
 
       <div class="settings-group">
-        <label class="setting-label">編碼速度</label>
+        <label class="setting-label">音訊設定</label>
         <div class="select-wrapper">
-          <select id="encodingPreset" class="select-input">
-            <option value="ultrafast">極快 (較大檔案)</option>
-            <option value="fast">快速</option>
-            <option value="medium" selected>平衡</option>
-            <option value="slow">慢速 (較小檔案)</option>
-            <option value="veryslow">極慢 (最小檔案)</option>
+          <select id="audioMode" class="select-input">
+            <option value="copy">保持原始音訊</option>
+            <option value="compress">壓縮音訊品質</option>
+            <option value="mute">靜音 (無音訊)</option>
           </select>
         </div>
-      </div>
-
-      <div class="settings-group">
-        <label class="setting-label checkbox-label">
-          <input type="checkbox" id="copyAudio" checked>
-          <span class="checkbox-custom"></span>
-          保持原始音訊
-        </label>
       </div>
 
       <div class="settings-group">
@@ -127,15 +120,15 @@
       <div class="quality-presets">
         <label class="setting-label">快速預設</label>
         <div class="preset-buttons">
-          <button class="preset-btn" data-crf="20" data-preset="slow">
+          <button class="preset-btn" data-quality="85" data-codec="h265_hw">
             <span class="preset-icon">✨</span>
             高畫質
           </button>
-          <button class="preset-btn active" data-crf="25" data-preset="medium">
+          <button class="preset-btn active" data-quality="65" data-codec="h265_hw">
             <span class="preset-icon">⚖️</span>
             平衡
           </button>
-          <button class="preset-btn" data-crf="30" data-preset="fast">
+          <button class="preset-btn" data-quality="45" data-codec="h265_hw">
             <span class="preset-icon">📦</span>
             小檔案
           </button>
@@ -217,7 +210,7 @@
             <span class="detail-value" id="progressSpeed">--</span>
           </span>
           <span class="detail-item">
-            <span class="detail-label">時間:</span>
+            <span class="detail-label">已處理:</span>
             <span class="detail-value" id="progressTime">--</span>
           </span>
         </div>

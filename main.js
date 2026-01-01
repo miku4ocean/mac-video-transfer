@@ -69,9 +69,7 @@ ipcMain.handle('open-file-dialog', async () => {
 ipcMain.handle('save-file-dialog', async (event, defaultName, format) => {
   const extensions = {
     mp4: ['mp4'],
-    webm: ['webm'],
-    mkv: ['mkv'],
-    avi: ['avi']
+    webm: ['webm']
   };
 
   const result = await dialog.showSaveDialog(mainWindow, {
@@ -127,34 +125,73 @@ ipcMain.handle('convert-video', async (event, options) => {
   return new Promise((resolve, reject) => {
     let command = ffmpeg(inputPath);
 
-    // Video codec settings
-    if (settings.codec === 'h265') {
-      command = command.videoCodec('libx265');
-      command = command.addOption('-tag:v', 'hvc1'); // For better compatibility
-    } else if (settings.codec === 'h264') {
-      command = command.videoCodec('libx264');
-    } else if (settings.codec === 'vp9') {
-      command = command.videoCodec('libvpx-vp9');
-      command = command.addOption('-b:v', '0'); // Required for CRF mode in VP9
-    }
+    // Video codec settings - with hardware acceleration support
+    switch (settings.codec) {
+      case 'h265_hw':
+        // Use VideoToolbox hardware acceleration for H.265/HEVC
+        command = command.videoCodec('hevc_videotoolbox');
+        command = command.addOption('-tag:v', 'hvc1'); // For better compatibility
+        // Quality setting for VideoToolbox (1-100, higher = better quality)
+        command = command.addOption('-q:v', settings.quality.toString());
+        break;
 
-    // Quality (CRF)
-    command = command.addOption('-crf', settings.crf.toString());
+      case 'h264_hw':
+        // Use VideoToolbox hardware acceleration for H.264
+        command = command.videoCodec('h264_videotoolbox');
+        // Quality setting for VideoToolbox (1-100, higher = better quality)
+        command = command.addOption('-q:v', settings.quality.toString());
+        break;
 
-    // Preset (encoding speed vs compression)
-    if (settings.codec !== 'vp9') {
-      command = command.addOption('-preset', settings.preset || 'medium');
+      case 'h265':
+        // Software H.265 encoding (slower but more efficient)
+        command = command.videoCodec('libx265');
+        command = command.addOption('-tag:v', 'hvc1');
+        // Convert quality (30-90) to CRF (28-18) - inverted scale
+        const h265Crf = Math.round(28 - ((settings.quality - 30) / 60) * 10);
+        command = command.addOption('-crf', h265Crf.toString());
+        command = command.addOption('-preset', 'medium');
+        break;
+
+      case 'h264':
+        // Software H.264 encoding (slower)
+        command = command.videoCodec('libx264');
+        // Convert quality (30-90) to CRF (28-18) - inverted scale
+        const h264Crf = Math.round(28 - ((settings.quality - 30) / 60) * 10);
+        command = command.addOption('-crf', h264Crf.toString());
+        command = command.addOption('-preset', 'medium');
+        break;
+
+      case 'vp9':
+        command = command.videoCodec('libvpx-vp9');
+        command = command.addOption('-b:v', '0'); // Required for CRF mode in VP9
+        // Convert quality (30-90) to CRF (40-20) - inverted scale
+        const vp9Crf = Math.round(40 - ((settings.quality - 30) / 60) * 20);
+        command = command.addOption('-crf', vp9Crf.toString());
+        break;
+
+      default:
+        // Default to hardware H.265
+        command = command.videoCodec('hevc_videotoolbox');
+        command = command.addOption('-tag:v', 'hvc1');
+        command = command.addOption('-q:v', settings.quality.toString());
     }
 
     // Audio settings
-    if (settings.copyAudio) {
-      command = command.audioCodec('copy');
-    } else {
-      command = command.audioCodec('aac').audioBitrate('192k');
+    switch (settings.audioMode) {
+      case 'copy':
+        command = command.audioCodec('copy');
+        break;
+      case 'compress':
+        command = command.audioCodec('aac').audioBitrate('128k');
+        break;
+      case 'mute':
+        command = command.noAudio();
+        break;
+      default:
+        command = command.audioCodec('copy');
     }
 
-    // Maintain resolution (no scaling)
-    // Only add scale filter if explicitly requested
+    // Resize if requested
     if (settings.maxWidth || settings.maxHeight) {
       const scaleFilter = `scale='min(${settings.maxWidth || 'iw'},iw)':'min(${settings.maxHeight || 'ih'},ih)':force_original_aspect_ratio=decrease`;
       command = command.videoFilters(scaleFilter);
@@ -166,8 +203,6 @@ ipcMain.handle('convert-video', async (event, options) => {
       command = command.format('mp4').addOption('-movflags', '+faststart');
     } else if (ext === '.webm') {
       command = command.format('webm');
-    } else if (ext === '.mkv') {
-      command = command.format('matroska');
     }
 
     // Progress reporting
