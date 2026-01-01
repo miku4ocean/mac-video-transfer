@@ -489,6 +489,10 @@ function renderResultsList() {
             </div>
           </div>
           <div class="result-actions">
+            <button class="btn btn-sm btn-secondary" title="重新設定再轉" data-action="reconvert" data-path="${result.inputPath}">
+              <span class="btn-icon">🔄</span>
+              再轉
+            </button>
             <button class="file-action-btn remove" title="刪除記錄" data-action="remove" data-index="${index}">🗑️</button>
           </div>
         </div>
@@ -526,6 +530,10 @@ function renderResultsList() {
             <span class="btn-icon">📁</span>
             開啟資料夾
           </button>
+          <button class="btn btn-sm btn-secondary" title="重新設定再轉" data-action="reconvert" data-path="${result.inputPath}">
+            <span class="btn-icon">🔄</span>
+            再轉
+          </button>
           <button class="file-action-btn remove" title="刪除記錄" data-action="remove" data-index="${index}">🗑️</button>
         </div>
       </div>
@@ -552,8 +560,46 @@ function initResultsEventListeners() {
             await window.api.showInFolder(path);
         } else if (action === 'remove' && index !== undefined) {
             removeResult(parseInt(index));
+        } else if (action === 'reconvert' && path) {
+            await reconvertFile(path);
         }
     });
+}
+
+// Re-queue file for conversion with different settings
+async function reconvertFile(inputPath) {
+    showLoading(true);
+
+    try {
+        const info = await window.api.getVideoInfo(inputPath);
+        const fileName = getFileName(inputPath);
+
+        // Check if already in queue
+        if (state.files.find(f => f.path === inputPath)) {
+            showToast(`${fileName} 已在待處理列表中`, 'warning');
+            showLoading(false);
+            return;
+        }
+
+        // Add to files queue
+        state.files.push({
+            path: inputPath,
+            name: fileName,
+            extension: getFileExtension(inputPath),
+            info: info
+        });
+
+        // Hide results, show file list
+        elements.resultsPanel.classList.add('hidden');
+        updateFileList();
+
+        showToast(`已加入待處理：${fileName}`, 'success');
+    } catch (error) {
+        console.error('Error getting video info:', error);
+        showToast(`無法讀取檔案：${getFileName(inputPath)}`, 'error');
+    }
+
+    showLoading(false);
 }
 
 function startNewConversion() {
