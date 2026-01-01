@@ -677,6 +677,10 @@ document.addEventListener('drop', async (e) => {
 // Quality slider
 elements.crfSlider.addEventListener('input', (e) => {
     elements.crfValue.textContent = e.target.value + '%';
+
+    // Remove active state from preset buttons when manually adjusting
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+
     if (state.files.length > 0) {
         updateFileList();
     }
