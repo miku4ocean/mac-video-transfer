@@ -179,13 +179,18 @@ function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings)
     }
 
     // Calculate resolution factor if resize is enabled
+    // Note: Video compression is NOT linear with pixel count
+    // Using width ratio (linear) is more accurate than pixel ratio (squared)
     let resizeFactor = 1;
     if (enableResize && (resizeWidth || resizeHeight)) {
-        const originalPixels = videoWidth * videoHeight;
-        const newWidth = resizeWidth || (videoWidth * (resizeHeight / videoHeight));
-        const newHeight = resizeHeight || (videoHeight * (resizeWidth / videoWidth));
-        const newPixels = newWidth * newHeight;
-        resizeFactor = Math.min(1, newPixels / originalPixels);
+        // Use width ratio as the primary factor (more realistic)
+        const widthRatio = resizeWidth ? Math.min(1, resizeWidth / videoWidth) : 1;
+        const heightRatio = resizeHeight ? Math.min(1, resizeHeight / videoHeight) : 1;
+        // Take the minimum ratio, then apply a conservative factor
+        // Actual compression doesn't scale linearly with resolution
+        resizeFactor = Math.min(widthRatio, heightRatio);
+        // Add some overhead for encoding inefficiency at lower resolutions
+        resizeFactor = Math.max(resizeFactor, 0.2); // Never estimate below 20% of original
     }
 
     // Quality is now a direct percentage of original bitrate
@@ -203,9 +208,10 @@ function estimateCompressedSize(originalSize, videoWidth, videoHeight, settings)
     }
 
     // H.265 is ~30% more efficient than H.264 at same bitrate
+    // But be more conservative in estimation
     let codecEfficiency = 1;
     if (codec.includes('h265') || codec === 'vp9') {
-        codecEfficiency = 0.7; // 30% smaller for same quality
+        codecEfficiency = 0.85; // 15% smaller (more conservative)
     }
 
     const estimatedSize = originalSize * qualityFactor * resizeFactor * audioFactor * codecEfficiency;
