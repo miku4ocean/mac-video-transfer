@@ -763,6 +763,11 @@ body {
   font-weight: 500;
 }
 
+.detail-value.highlight {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
 /* ========================================
    Results Panel
    ======================================== */

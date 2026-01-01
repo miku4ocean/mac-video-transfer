@@ -6,7 +6,8 @@ const state = {
     isConverting: false,
     isLoading: false,
     currentFileIndex: 0,
-    results: []
+    results: [],
+    conversionStartTime: null  // Track when conversion started
 };
 
 // ========================================
@@ -51,6 +52,8 @@ const elements = {
     progressText: document.getElementById('progressText'),
     progressSpeed: document.getElementById('progressSpeed'),
     progressTime: document.getElementById('progressTime'),
+    elapsedTime: document.getElementById('elapsedTime'),
+    remainingTime: document.getElementById('remainingTime'),
     cancelBtn: document.getElementById('cancelBtn'),
 
     // Results
@@ -381,10 +384,17 @@ async function startConversion() {
         state.currentFileIndex = i;
         const file = state.files[i];
 
-        // Update UI
+        // Record start time for this file
+        state.conversionStartTime = Date.now();
+
+        // Update UI and reset progress
         elements.currentFileInfo.innerHTML = `
       <div class="file-name">正在處理: ${file.name} (${i + 1}/${state.files.length})</div>
     `;
+        elements.progressBar.querySelector('.progress-fill').style.width = '0%';
+        elements.progressText.textContent = '0%';
+        elements.elapsedTime.textContent = '00:00';
+        elements.remainingTime.textContent = '計算中...';
 
         // Generate output filename with timestamp
         const baseName = file.name.replace(/\.[^/.]+$/, '');
@@ -727,6 +737,23 @@ window.api.onConversionProgress((data) => {
     elements.progressText.textContent = `${percent}%`;
     elements.progressTime.textContent = data.currentTime || '--:--';
     elements.progressSpeed.textContent = data.speed ? `${data.speed} fps` : '--';
+
+    // Calculate elapsed time
+    if (state.conversionStartTime) {
+        const elapsedMs = Date.now() - state.conversionStartTime;
+        const elapsedSec = Math.floor(elapsedMs / 1000);
+        elements.elapsedTime.textContent = formatDuration(elapsedSec);
+
+        // Calculate estimated remaining time
+        if (percent > 2) { // Need at least 2% progress for reasonable estimate
+            const totalEstimatedMs = (elapsedMs / percent) * 100;
+            const remainingMs = totalEstimatedMs - elapsedMs;
+            const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
+            elements.remainingTime.textContent = formatDuration(remainingSec);
+        } else {
+            elements.remainingTime.textContent = '計算中...';
+        }
+    }
 });
 
 // Make removeFile available globally
