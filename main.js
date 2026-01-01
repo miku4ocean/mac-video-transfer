@@ -147,57 +147,87 @@ ipcMain.handle('convert-video', async (event, options) => {
       // Video bitrate = Total bitrate - Audio bitrate
       // Add 5% safety margin to ensure we stay under target
       const totalBitrate = (settings.targetSize * 8) / duration;
-      const audioSafeBitrate = settings.audioMode === 'mute' ? 0 :
-        settings.audioMode === 'compress' ? 128000 :
-          audioBitrate;
-      targetVideoBitrate = Math.floor((totalBitrate - audioSafeBitrate) * 0.95);
+      // For 'copy' audio mode, use actual audio bitrate from the source
+      // For 'compress', use 128kbps; for 'mute', use 0
+      let audioSafeBitrate = 0;
+      if (settings.audioMode === 'mute') {
+        audioSafeBitrate = 0;
+      } else if (settings.audioMode === 'compress') {
+        audioSafeBitrate = 128000;
+      } else {
+        // 'copy' mode - use actual audio bitrate or estimate
+        audioSafeBitrate = audioBitrate || 128000;
+      }
 
-      // Minimum bitrate to maintain some quality
-      if (targetVideoBitrate > 100000) { // At least 100kbps
+      targetVideoBitrate = Math.floor((totalBitrate - audioSafeBitrate) * 0.90); // 10% safety margin
+
+      console.log(`Target size: ${(settings.targetSize / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`Duration: ${duration.toFixed(2)}s`);
+      console.log(`Total bitrate needed: ${(totalBitrate / 1000).toFixed(0)} kbps`);
+      console.log(`Audio bitrate: ${(audioSafeBitrate / 1000).toFixed(0)} kbps`);
+      console.log(`Calculated video bitrate: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
+
+      // Minimum bitrate to maintain some quality - lowered to 50kbps
+      if (targetVideoBitrate > 50000) { // At least 50kbps
         useTargetBitrate = true;
-        console.log(`Target size: ${(settings.targetSize / 1024 / 1024).toFixed(2)} MB`);
-        console.log(`Duration: ${duration.toFixed(2)}s`);
-        console.log(`Calculated video bitrate: ${(targetVideoBitrate / 1000).toFixed(0)} kbps`);
+      } else {
+        console.log('Warning: Target size too small, video bitrate would be below 50kbps. Using quality mode instead.');
       }
     }
 
     // Video codec settings - with hardware acceleration support
     if (useTargetBitrate) {
       // When targeting specific size, use bitrate control instead of quality
+      // Add maxrate and bufsize for stricter control
+      const maxRate = Math.floor(targetVideoBitrate * 1.1); // Allow 10% peak
+      const bufSize = targetVideoBitrate * 2; // 2 seconds buffer
+
       switch (settings.codec) {
         case 'h265_hw':
           command = command.videoCodec('hevc_videotoolbox');
           command = command.addOption('-tag:v', 'hvc1');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
           break;
 
         case 'h264_hw':
           command = command.videoCodec('h264_videotoolbox');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
           break;
 
         case 'h265':
           command = command.videoCodec('libx265');
           command = command.addOption('-tag:v', 'hvc1');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
           command = command.addOption('-preset', 'medium');
           break;
 
         case 'h264':
           command = command.videoCodec('libx264');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
           command = command.addOption('-preset', 'medium');
           break;
 
         case 'vp9':
           command = command.videoCodec('libvpx-vp9');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
           break;
 
         default:
           command = command.videoCodec('hevc_videotoolbox');
           command = command.addOption('-tag:v', 'hvc1');
           command = command.addOption('-b:v', targetVideoBitrate.toString());
+          command = command.addOption('-maxrate', maxRate.toString());
+          command = command.addOption('-bufsize', bufSize.toString());
       }
     } else {
       // Use quality-based encoding (original logic)
