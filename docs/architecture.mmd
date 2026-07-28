@@ -1,0 +1,44 @@
+%% mac-video-transfer — 架構圖（Mermaid）
+%% 依實際程式碼繪製（main.js / preload.js / renderer.js / index.html）
+%% 本工具為純本機 Electron 桌面應用：無後端伺服器、無資料庫、無帳號系統
+flowchart TB
+    classDef layer fill:#FBFAF7,stroke:#E7E3DA,stroke-width:1px,color:#181B20
+    classDef keystone fill:#EAEEF7,stroke:#2E4B8F,stroke-width:3px,color:#181B20,font-weight:bold
+    classDef absent fill:#FBFAF7,stroke:#B03A2E,stroke-width:1px,stroke-dasharray:5 4,color:#B03A2E
+
+    subgraph L1["① 使用者介面層 — Electron Renderer Process"]
+        UI["index.html + styles.css + renderer.js<br/>單頁四態：拖放/選檔（空狀態）→ 待處理清單 → 轉檔進度 → 完成結果<br/>側邊欄：輸出格式／編碼器／品質／音訊／解析度／目標大小／快速預設"]
+    end
+
+    subgraph L2["② IPC 橋接層 — preload.js"]
+        BRIDGE["contextBridge.exposeInMainWorld('api', {...})<br/>contextIsolation: true ／ nodeIntegration: false<br/>暴露：openFileDialog／saveFileDialog／getVideoInfo／convertVideo／cancelConversion／showInFolder／openFile"]
+    end
+
+    subgraph L3["③ Electron 主行程 — main.js"]
+        MAIN["BrowserWindow 建立與生命週期<br/>ipcMain.handle：開檔/存檔對話框、get-video-info（ffprobe）、convert-video、cancel-conversion、show-in-folder、open-file"]
+    end
+
+    subgraph L4["④ 本機處理引擎"]
+        FFMPEG["fluent-ffmpeg 呼叫 ffmpeg-static／ffprobe-static 二進位（子行程）<br/>編碼器：H.265/H.264 硬體加速(VideoToolbox)、H.265/H.264 軟體、VP9<br/>⚠ 打包後路徑需 app.asar → app.asar.unpacked 修正（commit 9866ac1）"]
+    end
+
+    subgraph L5["⑤ 本機檔案系統"]
+        FS["使用者 Mac 磁碟：輸入影片檔 → 輸出影片檔（MP4/WebM）<br/>無資料庫、無帳號、無雲端儲存"]
+    end
+
+    ABSENT["✗ 雲端 API／上傳伺服器／帳號系統<br/>本工具『未確認』有規劃此層 —— 目前程式碼中不存在"]:::absent
+
+    UI -- "window.api.*() 呼叫" --> BRIDGE
+    BRIDGE -- "ipcRenderer.invoke(channel,...)" --> MAIN
+    MAIN -- "spawn 子行程執行" --> FFMPEG
+    FFMPEG -- "讀取／寫入檔案" --> FS
+    MAIN -. "conversion-started／conversion-progress 事件推回" .-> UI
+    MAIN -.->|"不會發生的呼叫"| ABSENT
+
+    KEYSTONE["🔒 Keystone 設計決定：全本機處理<br/>影片檔案『不曾離開這台 Mac』<br/>無網路呼叫・無雲端上傳・無帳號・無遙測<br/>→ 大檔案、隱私敏感影片可安心處理，且離線可用"]:::keystone
+
+    KEYSTONE -. 涵蓋 .-> L3
+    KEYSTONE -. 涵蓋 .-> L4
+    KEYSTONE -. 涵蓋 .-> L5
+
+    class L1,L2,L3,L4,L5 layer

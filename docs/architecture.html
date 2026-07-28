@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mac-video-transfer — 系統架構</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#181B20; --muted:#6B7178;
+  --line:#E7E3DA; --accent:#2E4B8F; --accent-soft:#EAEEF7;
+  --ok:#1F7A54; --err:#B03A2E; --warn:#B8860B;
+  --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+  line-height:1.6;
+}
+.page{ max-width:1080px; margin:0 auto; padding:48px 32px 96px; }
+.wordmark{ font-family:var(--serif); font-size:28px; }
+.wordmark .dot{ color:var(--accent); }
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); margin-top:6px;
+}
+header{ border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:32px; }
+h1{ font-family:var(--serif); font-size:22px; font-weight:600; margin:28px 0 12px; }
+h2{
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; margin:36px 0 12px;
+}
+p{ margin:0 0 12px; font-size:14.5px; }
+.card{
+  background:var(--paper); border:1px solid var(--line); border-radius:10px;
+  padding:20px 24px; margin-bottom:16px;
+}
+.keystone-card{
+  background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px;
+  padding:22px 26px; margin:16px 0 28px;
+}
+.keystone-card h3{ margin:0 0 8px; font-size:15px; color:var(--ink); }
+.keystone-card h3 .lock{ color:var(--accent); margin-right:6px; }
+ul{ margin:0; padding-left:20px; font-size:14px; }
+li{ margin-bottom:6px; }
+.badge{
+  display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em;
+  padding:2px 8px; border-radius:5px; border:1px solid var(--line); color:var(--muted);
+  margin-right:6px;
+}
+.diagram-wrap{
+  border:1px solid var(--line); border-radius:10px; overflow:auto; background:var(--paper);
+  margin:20px 0 32px; padding:8px;
+}
+.diagram-wrap svg{ width:100%; height:auto; display:block; }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:760px){ .grid2{ grid-template-columns:1fr; } }
+.status-ok{ color:var(--ok); }
+.status-warn{ color:var(--warn); }
+.status-err{ color:var(--err); }
+.foot{ margin-top:48px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+code{ font-family:var(--mono); font-size:12.5px; background:var(--accent-soft); padding:1px 5px; border-radius:4px; }
+.buildlog{ font-family:var(--mono); font-size:12.5px; }
+.buildlog .tick{ color:var(--ok); }
+.buildlog .warn{ color:var(--warn); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="wordmark">Video Compressor<span class="dot">.</span></div>
+    <div class="eyebrow">System Architecture — mac-video-transfer（Electron 原生桌面版）</div>
+  </header>
+
+  <p>本文件依實際讀取的原始碼與文件繪製：<code>main.js</code>／<code>preload.js</code>／<code>renderer.js</code>／<code>index.html</code>／<code>package.json</code>／<code>HANDOFF.md</code>／<code>AGENTS.md</code>／<code>README.md</code>／git log。<strong>mac-video-transfer</strong> 是原生 Electron 桌面應用，與姊妹專案 <em>mac-video-transfer-web</em>（若存在的 Web／雲端版本）為不同架構，不在本圖範圍內。</p>
+
+  <div class="keystone-card">
+    <h3><span class="lock">🔒</span>Keystone 設計決定：全本機處理</h3>
+    <p style="margin-bottom:8px;">影片檔案<strong>不曾離開這台 Mac</strong>。壓縮全程由本機 Electron 主行程呼叫綁定的 <code>ffmpeg-static</code>／<code>ffprobe-static</code> 二進位子行程完成，沒有任何一行程式碼會把使用者的影片上傳到伺服器。</p>
+    <ul>
+      <li>無網路呼叫、無雲端上傳、無帳號系統、無遙測回傳（原始碼中確認不存在）</li>
+      <li>對比：多數線上影片壓縮工具需要把大型影片檔上傳到伺服器，等候排隊處理</li>
+      <li>代價：處理速度完全取決於本機硬體（是否有 VideoToolbox 硬體加速）；無法跨裝置排隊等雲端算力</li>
+    </ul>
+  </div>
+
+  <h2>五層架構圖</h2>
+  <div class="diagram-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1080" font-family="ui-sans-serif,system-ui,'Segoe UI',Roboto,'Noto Sans TC',sans-serif">
+      <title>mac-video-transfer — 系統架構</title>
+      <desc>Electron 桌面應用架構圖：使用者介面層、IPC 橋接層、Electron 主行程、本機處理引擎、本機檔案系統。無雲端／無後端服務。Keystone：全本機處理，影片不上傳雲端。</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#2E4B8F"/>
+        </marker>
+        <marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6B7178"/>
+        </marker>
+        <marker id="arrowErr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#B03A2E"/>
+        </marker>
+      </defs>
+      <rect x="0" y="0" width="1000" height="1080" fill="#FBFAF7"/>
+      <text x="60" y="52" font-family="Georgia,'Iowan Old Style','Times New Roman',serif" font-size="26" fill="#181B20">Video Compressor<tspan fill="#2E4B8F">.</tspan></text>
+      <text x="60" y="76" font-family="ui-monospace,'SF Mono','Cascadia Code',Menlo,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">SYSTEM ARCHITECTURE — mac-video-transfer（原生 Electron 桌面版）</text>
+      <line x1="60" y1="92" x2="940" y2="92" stroke="#E7E3DA" stroke-width="1"/>
+
+      <rect x="60" y="130" width="620" height="140" rx="9" fill="#FBFAF7" stroke="#E7E3DA" stroke-width="1.4"/>
+      <text x="80" y="156" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">① 使用者介面層 — ELECTRON RENDERER PROCESS</text>
+      <text x="80" y="184" font-size="14" fill="#181B20" font-weight="600">index.html + styles.css + renderer.js</text>
+      <text x="80" y="206" font-size="12.5" fill="#181B20">單頁四態：空狀態(拖放/選檔) → 待處理清單 → 轉檔進度 → 完成結果</text>
+      <text x="80" y="228" font-size="12.5" fill="#181B20">側邊欄常駐：輸出格式／編碼器／品質／音訊／解析度／目標大小／快速預設</text>
+      <text x="80" y="252" font-size="11.5" fill="#6B7178">✓ 已讀原始碼確認</text>
+
+      <rect x="60" y="300" width="620" height="110" rx="9" fill="#FBFAF7" stroke="#E7E3DA" stroke-width="1.4"/>
+      <text x="80" y="326" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">② IPC 橋接層 — PRELOAD.JS</text>
+      <text x="80" y="354" font-size="14" fill="#181B20" font-weight="600">contextBridge.exposeInMainWorld('api', {...})</text>
+      <text x="80" y="376" font-size="12.5" fill="#181B20">contextIsolation:true／nodeIntegration:false（安全通道，不暴露完整 ipcRenderer）</text>
+      <text x="80" y="397" font-size="11.5" fill="#6B7178">✓ 已讀原始碼確認</text>
+
+      <rect x="60" y="440" width="620" height="140" rx="9" fill="#FBFAF7" stroke="#2E4B8F" stroke-width="1.6"/>
+      <text x="80" y="466" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">③ ELECTRON 主行程 — MAIN.JS</text>
+      <text x="80" y="494" font-size="14" fill="#181B20" font-weight="600">ipcMain.handle：對話框／get-video-info／convert-video／cancel</text>
+      <text x="80" y="516" font-size="12.5" fill="#181B20">BrowserWindow 生命週期管理、進度事件透過 webContents.send 推回 UI</text>
+      <text x="80" y="538" font-size="12.5" fill="#181B20">show-in-folder／open-file（呼叫系統 shell）</text>
+      <text x="80" y="562" font-size="11.5" fill="#6B7178">✓ 已讀原始碼確認</text>
+
+      <rect x="60" y="610" width="620" height="140" rx="9" fill="#FBFAF7" stroke="#2E4B8F" stroke-width="1.6"/>
+      <text x="80" y="636" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">④ 本機處理引擎</text>
+      <text x="80" y="664" font-size="14" fill="#181B20" font-weight="600">fluent-ffmpeg → ffmpeg-static／ffprobe-static（子行程）</text>
+      <text x="80" y="686" font-size="12.5" fill="#181B20">編碼器：H.265/H.264 硬體加速(VideoToolbox)、H.265/H.264 軟體、VP9</text>
+      <text x="80" y="708" font-size="12.5" fill="#B8860B">▸ 打包後路徑修正：app.asar → app.asar.unpacked（commit 9866ac1，僅開發模式已驗證）</text>
+      <text x="80" y="732" font-size="11.5" fill="#6B7178">✓ 已讀原始碼確認</text>
+
+      <rect x="60" y="780" width="620" height="120" rx="9" fill="#FBFAF7" stroke="#2E4B8F" stroke-width="1.6"/>
+      <text x="80" y="806" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">⑤ 本機檔案系統</text>
+      <text x="80" y="834" font-size="14" fill="#181B20" font-weight="600">使用者 Mac 磁碟：輸入影片檔 → 輸出影片檔（MP4／WebM）</text>
+      <text x="80" y="856" font-size="12.5" fill="#181B20">無資料庫、無帳號、無雲端儲存</text>
+      <text x="80" y="880" font-size="11.5" fill="#6B7178">✓ 已讀原始碼確認</text>
+
+      <line x1="370" y1="270" x2="370" y2="298" stroke="#2E4B8F" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="370" y1="410" x2="370" y2="438" stroke="#2E4B8F" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="370" y1="580" x2="370" y2="608" stroke="#2E4B8F" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="370" y1="750" x2="370" y2="778" stroke="#2E4B8F" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <text x="386" y="290" font-size="11" fill="#6B7178">window.api.*() 呼叫</text>
+      <text x="386" y="430" font-size="11" fill="#6B7178">ipcRenderer.invoke(channel,…)</text>
+      <text x="386" y="600" font-size="11" fill="#6B7178">spawn 子行程執行</text>
+      <text x="386" y="770" font-size="11" fill="#6B7178">讀取／寫入檔案</text>
+
+      <path d="M 50 500 C -10 500, -10 200, 50 200" fill="none" stroke="#6B7178" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrowMuted)" transform="translate(20,0)"/>
+      <text x="15" y="350" font-size="11" fill="#6B7178" transform="rotate(-90 15 350)">conversion-progress 事件推回 UI</text>
+
+      <rect x="740" y="130" width="200" height="140" rx="9" fill="#FBFAF7" stroke="#B03A2E" stroke-width="1.4" stroke-dasharray="6 5"/>
+      <text x="760" y="158" font-size="20" fill="#B03A2E">✗</text>
+      <text x="785" y="158" font-size="12.5" fill="#B03A2E" font-weight="600">雲端 API／上傳伺服器</text>
+      <text x="760" y="182" font-size="12" fill="#B03A2E">帳號系統／遙測</text>
+      <text x="760" y="206" font-size="12" fill="#6B7178">本工具程式碼中不存在</text>
+      <text x="760" y="226" font-size="12" fill="#6B7178">此層，「未確認」有規劃</text>
+      <text x="760" y="248" font-size="12" fill="#6B7178">要新增此層。</text>
+      <line x1="680" y1="200" x2="738" y2="200" stroke="#B03A2E" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrowErr)"/>
+      <text x="686" y="192" font-size="10.5" fill="#B03A2E">不會發生的呼叫</text>
+
+      <rect x="740" y="440" width="200" height="460" rx="10" fill="#EAEEF7" stroke="#2E4B8F" stroke-width="2.4"/>
+      <text x="760" y="472" font-size="22" fill="#2E4B8F">🔒</text>
+      <text x="760" y="500" font-size="13.5" fill="#181B20" font-weight="700">Keystone 設計決定</text>
+      <text x="760" y="524" font-size="12.5" fill="#181B20" font-weight="600">全本機處理</text>
+      <text x="760" y="550" font-size="12" fill="#181B20">影片檔案「不曾離開</text>
+      <text x="760" y="568" font-size="12" fill="#181B20">這台 Mac」</text>
+      <text x="760" y="600" font-size="12" fill="#181B20">・無網路呼叫</text>
+      <text x="760" y="622" font-size="12" fill="#181B20">・無雲端上傳</text>
+      <text x="760" y="644" font-size="12" fill="#181B20">・無帳號系統</text>
+      <text x="760" y="666" font-size="12" fill="#181B20">・無遙測回傳</text>
+      <line x1="760" y1="690" x2="920" y2="690" stroke="#2E4B8F" stroke-width="1"/>
+      <text x="760" y="714" font-size="11.5" fill="#6B7178">→ 大檔案、隱私敏感</text>
+      <text x="760" y="734" font-size="11.5" fill="#6B7178">影片可安心處理</text>
+      <text x="760" y="756" font-size="11.5" fill="#6B7178">→ 離線可用，速度</text>
+      <text x="760" y="776" font-size="11.5" fill="#6B7178">取決於本機硬體</text>
+      <text x="760" y="798" font-size="11.5" fill="#6B7178">（VideoToolbox）</text>
+      <text x="760" y="828" font-size="11" fill="#B8860B">▸ 對比：多數線上壓縮</text>
+      <text x="760" y="846" font-size="11" fill="#B8860B">工具需上傳影片至伺服器</text>
+
+      <line x1="680" y1="510" x2="738" y2="560" stroke="#2E4B8F" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <line x1="680" y1="680" x2="738" y2="660" stroke="#2E4B8F" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <line x1="680" y1="840" x2="738" y2="760" stroke="#2E4B8F" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+      <line x1="60" y1="940" x2="940" y2="940" stroke="#E7E3DA" stroke-width="1"/>
+      <text x="60" y="964" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.5" fill="#6B7178">LEGEND</text>
+      <text x="60" y="988" font-size="12" fill="#181B20">✓ 已讀原始碼確認的元件　　▸ 已知風險／進行中細節　　✗ 不存在／未規劃的層　　🔒 Keystone 關鍵設計決定</text>
+      <text x="60" y="1010" font-size="11.5" fill="#6B7178">來源：main.js／preload.js／renderer.js／index.html／HANDOFF.md／AGENTS.md／README.md／git log（2026-07-24 讀取）</text>
+      <text x="60" y="1032" font-size="11.5" fill="#6B7178">本圖依 mac-video-transfer 實際程式碼繪製；姊妹專案 mac-video-transfer-web（若存在雲端/Web 版）不在此圖範圍內。</text>
+    </svg>
+  </div>
+
+  <h2>分層說明</h2>
+  <div class="grid2">
+    <div class="card">
+      <strong>① 使用者介面層</strong>
+      <p style="margin-top:8px;">單一 <code>BrowserWindow</code> 渲染 <code>index.html</code>，以 <code>renderer.js</code> 驅動狀態機切換四種畫面：空狀態（拖放/選檔）、待處理清單、轉檔進度、完成結果。側邊設定欄（輸出格式、編碼器、品質、音訊、解析度、目標大小、快速預設）在四態間常駐不變。</p>
+    </div>
+    <div class="card">
+      <strong>② IPC 橋接層</strong>
+      <p style="margin-top:8px;"><code>preload.js</code> 透過 <code>contextBridge</code> 只暴露白名單方法給 renderer，<code>contextIsolation:true</code>、<code>nodeIntegration:false</code>，避免 renderer 直接存取 Node.js／檔案系統。</p>
+    </div>
+    <div class="card">
+      <strong>③ Electron 主行程</strong>
+      <p style="margin-top:8px;"><code>main.js</code> 是唯一協調者：建立視窗、處理開檔/存檔對話框、呼叫 ffprobe 取得影片資訊、組裝 FFmpeg 指令並監控轉檔進度、把進度事件送回 UI。</p>
+    </div>
+    <div class="card">
+      <strong>④ 本機處理引擎</strong>
+      <p style="margin-top:8px;">透過 <code>fluent-ffmpeg</code> 呼叫綁定的 <code>ffmpeg-static</code>／<code>ffprobe-static</code> 二進位（作為子行程執行）。<span class="status-warn">打包後路徑需從 <code>app.asar</code> 轉換成 <code>app.asar.unpacked</code></span>（HANDOFF.md 記載此修正已完成但僅在開發模式驗證，打包版尚待人手驗證）。</p>
+    </div>
+    <div class="card">
+      <strong>⑤ 本機檔案系統</strong>
+      <p style="margin-top:8px;">輸入與輸出影片檔皆為使用者磁碟上的一般檔案，透過系統對話框選取／儲存。沒有資料庫、沒有帳號、沒有雲端儲存。</p>
+    </div>
+    <div class="card">
+      <strong>✗ 刻意不存在的層</strong>
+      <p style="margin-top:8px;">依規格要求誠實標示：本專案<strong>沒有</strong>傳統 Web 架構常見的「API 層／雲端服務層」。所有處理都在 ③④⑤ 三層內於本機完成，這正是上方 Keystone 的具體體現。</p>
+    </div>
+  </div>
+
+  <h2>Build Log（本次調查）</h2>
+  <div class="card buildlog">
+    <div><span class="tick">✓</span> 讀取 HANDOFF.md／AGENTS.md／CLAUDE.md／README.md／package.json</div>
+    <div><span class="tick">✓</span> 讀取 main.js（381 行）／preload.js（32 行）／index.html（258 行）／renderer.js（約 800+ 行，含 UI 狀態機、壓縮估算、結果渲染）</div>
+    <div><span class="tick">✓</span> 確認 test_compression.js 為手動效能比較腳本，非自動化測試套件（無 CI／無 vitest/jest 設定）</div>
+    <div><span class="warn">▸</span> npm audit：15 個漏洞（1 critical），多屬 electron-builder 開發期依賴，尚未執行修復（HANDOFF.md 記載）</div>
+    <div><span class="warn">▸</span> 打包版（DMG）FFmpeg 路徑修正僅程式碼可見，未做打包後功能驗證</div>
+  </div>
+
+  <div class="foot">mac-video-transfer · /Users/leonalin/Code/mac-video-transfer · 架構圖產出於 2026-07-24</div>
+</div>
+</body>
+</html>

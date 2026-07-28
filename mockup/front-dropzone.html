@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — 空狀態／拖放檔案</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#181B20; --muted:#6B7178;
+  --line:#E7E3DA; --accent:#2E4B8F; --accent-soft:#EAEEF7;
+  --ok:#1F7A54; --err:#B03A2E; --warn:#B8860B;
+  --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+.page{max-width:1100px;margin:0 auto;padding:40px 28px 80px;}
+.wordmark{font-family:var(--serif);font-size:24px;}
+.wordmark .dot{color:var(--accent);}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.backlink{font-family:var(--mono);font-size:11px;color:var(--accent);text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;}
+.state-pills{display:flex;gap:8px;margin:18px 0 28px;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;padding:5px 10px;border-radius:20px;border:1px solid var(--line);color:var(--muted);}
+.pill.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600;}
+.note{font-size:12.5px;color:var(--muted);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:24px;}
+h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:28px 0 10px;}
+
+.app-frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.app-titlebar{background:var(--paper);border-bottom:1px solid var(--line);padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.app-body{display:flex;min-height:560px;}
+.app-sidebar{width:260px;border-right:1px solid var(--line);padding:18px 16px;background:var(--paper);flex-shrink:0;}
+.app-content{flex:1;padding:24px;background:var(--paper);position:relative;}
+
+.wire-group{margin-bottom:16px;}
+.wire-label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.wire-box{border:1px dashed var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;color:var(--ink);background:var(--paper);}
+.wire-divider{height:1px;background:var(--line);margin:16px 0;border:none;}
+.wire-preset-row{display:flex;gap:6px;}
+.wire-preset{flex:1;border:1px dashed var(--line);border-radius:6px;padding:8px 4px;text-align:center;font-size:11px;}
+.wire-preset.active{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+
+.btn{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+.dropzone{
+  border:2px dashed var(--line); border-radius:14px; height:100%; min-height:480px;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; text-align:center;
+}
+.drop-icon{width:64px;height:64px;border:1px dashed var(--muted);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);margin-bottom:6px;}
+.dropzone h3{margin:0;font-size:17px;}
+.dropzone p{margin:0;color:var(--muted);font-size:13px;}
+.formats{margin-top:14px;font-size:11.5px;color:var(--muted);font-family:var(--mono);}
+.foot{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <div class="wordmark">Video Compressor<span class="dot">.</span></div>
+      <div class="eyebrow">Mockup — front · dropzone（空狀態）</div>
+    </div>
+    <a class="backlink" href="index.html">← 回 mockup 總覽</a>
+  </header>
+
+  <div class="state-pills">
+    <span class="pill active">① 空狀態／拖放</span>
+    <span class="pill">② 待處理清單</span>
+    <span class="pill">③ 轉檔進度</span>
+    <span class="pill">④ 完成結果</span>
+  </div>
+
+  <div class="note">單頁 Electron 應用的第一種狀態，對應 <code>index.html</code> 的 <code>#dropZone</code>。線框稿，僅呈現版面結構與關鍵文案，非真功能。</div>
+
+  <div class="app-frame">
+    <div class="app-titlebar">🎬 Video Compressor</div>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <h2 class="section" style="margin-top:0;">輸出設定</h2>
+        <div class="wire-group"><span class="wire-label">輸出格式</span><div class="wire-box">MP4 (H.264/H.265) ▾</div></div>
+        <div class="wire-group"><span class="wire-label">編碼器</span><div class="wire-box">H.265 硬體加速 ⚡ (推薦) ▾</div></div>
+        <div class="wire-group">
+          <span class="wire-label">壓縮品質（相對原始位元率） 50%</span>
+          <div class="wire-box">━━━━●━━━━━━━━━━</div>
+        </div>
+        <div class="wire-group"><span class="wire-label">音訊設定</span><div class="wire-box">保持原始音訊 ▾</div></div>
+        <div class="wire-group"><span class="wire-label">☐ 調整影像尺寸</span></div>
+        <div class="wire-group"><span class="wire-label">☐ 壓縮至限定大小以下</span></div>
+        <hr class="wire-divider">
+        <span class="wire-label">快速預設</span>
+        <div class="wire-preset-row">
+          <div class="wire-preset">✨ 高畫質 75%</div>
+          <div class="wire-preset active">⚖️ 平衡 50%</div>
+          <div class="wire-preset">📦 小檔案 25%</div>
+        </div>
+      </aside>
+
+      <main class="app-content">
+        <div class="dropzone">
+          <div class="drop-icon">⬆</div>
+          <h3>拖放影片檔案到這裡</h3>
+          <p>或點擊下方按鈕選擇檔案</p>
+          <button class="btn btn-primary">📁 選擇檔案</button>
+          <div class="formats">支援格式：MOV, MP4, MPG, WMV, WebM, AVI, MKV, FLV, M4V, 3GP</div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="foot">來源：/Users/leonalin/Code/mac-video-transfer/index.html（#dropZone）／renderer.js。依實際實作繪製，非規劃推導。</div>
+</div>
+</body>
+</html>

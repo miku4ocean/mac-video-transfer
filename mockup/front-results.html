@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — 完成結果</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#181B20; --muted:#6B7178;
+  --line:#E7E3DA; --accent:#2E4B8F; --accent-soft:#EAEEF7;
+  --ok:#1F7A54; --err:#B03A2E; --warn:#B8860B;
+  --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+.page{max-width:1100px;margin:0 auto;padding:40px 28px 80px;}
+.wordmark{font-family:var(--serif);font-size:24px;}
+.wordmark .dot{color:var(--accent);}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+.backlink{font-family:var(--mono);font-size:11px;color:var(--accent);text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;}
+.state-pills{display:flex;gap:8px;margin:18px 0 28px;flex-wrap:wrap;}
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;padding:5px 10px;border-radius:20px;border:1px solid var(--line);color:var(--muted);}
+.pill.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600;}
+.note{font-size:12.5px;color:var(--muted);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:24px;}
+h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:28px 0 10px;}
+
+.app-frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.app-titlebar{background:var(--paper);border-bottom:1px solid var(--line);padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.app-body{display:flex;min-height:560px;}
+.app-sidebar{width:260px;border-right:1px solid var(--line);padding:18px 16px;background:var(--paper);flex-shrink:0;}
+.app-content{flex:1;padding:24px;background:var(--paper);position:relative;}
+
+.wire-group{margin-bottom:16px;}
+.wire-label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.wire-box{border:1px dashed var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;color:var(--ink);background:var(--paper);}
+
+.btn{font-family:var(--sans);font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-row{display:flex;gap:8px;}
+
+.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.results-header h3{margin:0;font-size:15px;}
+.result-item{border:1px solid var(--line);border-radius:9px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+.result-item.error{border-color:var(--err);}
+.result-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--accent-soft);color:var(--ok);}
+.result-icon.error-icon{background:#f7e9e7;color:var(--err);}
+.result-info{flex:1;}
+.result-name{font-size:13.5px;font-weight:600;margin-bottom:6px;}
+.result-stats{font-size:11.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;}
+.result-stats .success{color:var(--ok);font-weight:600;}
+.result-stats .err-text{color:var(--err);}
+.result-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.foot{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <div class="wordmark">Video Compressor<span class="dot">.</span></div>
+      <div class="eyebrow">Mockup — front · results（完成結果）</div>
+    </div>
+    <a class="backlink" href="index.html">← 回 mockup 總覽</a>
+  </header>
+
+  <div class="state-pills">
+    <span class="pill">① 空狀態／拖放</span>
+    <span class="pill">② 待處理清單</span>
+    <span class="pill">③ 轉檔進度</span>
+    <span class="pill active">④ 完成結果</span>
+  </div>
+
+  <div class="note">全部檔案處理完成後的狀態，對應 <code>index.html</code> 的 <code>#resultsPanel</code>。同時示範成功與失敗兩種結果卡片（<code>renderer.js</code> <code>renderResultsList()</code>）。線框稿，非真功能。</div>
+
+  <div class="app-frame">
+    <div class="app-titlebar">🎬 Video Compressor</div>
+    <div class="app-body">
+      <aside class="app-sidebar">
+        <h2 class="section" style="margin-top:0;">輸出設定</h2>
+        <div class="wire-group"><span class="wire-label">輸出格式</span><div class="wire-box">MP4 (H.264/H.265) ▾</div></div>
+        <div class="wire-group"><span class="wire-label">編碼器</span><div class="wire-box">H.265 硬體加速 ⚡ (推薦) ▾</div></div>
+      </aside>
+
+      <main class="app-content">
+        <div class="results-header">
+          <h3>轉檔完成</h3>
+          <div class="btn-row">
+            <button class="btn">🗑️ 清除全部</button>
+            <button class="btn btn-primary">➕ 新增檔案</button>
+          </div>
+        </div>
+
+        <div class="result-item">
+          <div class="result-icon">✓</div>
+          <div class="result-info">
+            <div class="result-name">family_trip_2026_20260724.mp4</div>
+            <div class="result-stats">
+              <span>原始: <b>472.73 MB</b></span>
+              <span class="success">壓縮後: 236.40 MB</span>
+              <span class="success">節省: 50.0%</span>
+            </div>
+          </div>
+          <div class="result-actions">
+            <button class="btn">▶️ 播放</button>
+            <button class="btn">📁 開啟資料夾</button>
+            <button class="btn">🔄 再轉</button>
+            <button class="btn">🗑️</button>
+          </div>
+        </div>
+
+        <div class="result-item error">
+          <div class="result-icon error-icon">❌</div>
+          <div class="result-info">
+            <div class="result-name">product_demo.mp4</div>
+            <div class="result-stats"><span class="err-text">Cannot find ffmpeg</span></div>
+          </div>
+          <div class="result-actions">
+            <button class="btn">🔄 再轉</button>
+            <button class="btn">🗑️</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="foot">來源：/Users/leonalin/Code/mac-video-transfer/index.html（#resultsPanel）／renderer.js renderResultsList()。依實際實作繪製，非規劃推導。</div>
+</div>
+</body>
+</html>

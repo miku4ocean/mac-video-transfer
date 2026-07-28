@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mac-video-transfer — Mockup 總覽</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#181B20; --muted:#6B7178;
+  --line:#E7E3DA; --accent:#2E4B8F; --accent-soft:#EAEEF7;
+  --ok:#1F7A54; --err:#B03A2E; --warn:#B8860B;
+  --serif:"Iowan Old Style",Georgia,"Times New Roman",serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;}
+.page{max-width:920px;margin:0 auto;padding:48px 28px 90px;}
+.wordmark{font-family:var(--serif);font-size:28px;}
+.wordmark .dot{color:var(--accent);}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:6px;}
+header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px;}
+h2.section{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:32px 0 14px;}
+p{font-size:14.5px;margin:0 0 12px;}
+.note{font-size:12.5px;color:var(--muted);background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:8px;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;}
+@media (max-width:640px){.grid{grid-template-columns:1fr;}}
+.card{border:1px solid var(--line);border-radius:10px;padding:18px 20px;background:var(--paper);text-decoration:none;color:var(--ink);display:block;transition:border-color .15s;}
+.card:hover{border-color:var(--accent);}
+.card .idx{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.05em;}
+.card h3{margin:6px 0 6px;font-size:15px;}
+.card p{margin:0;font-size:12.5px;color:var(--muted);}
+.admin-card{border:1px dashed var(--err);border-radius:10px;padding:18px 20px;color:var(--err);font-size:12.5px;}
+.buildlog{font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:9px;padding:16px 18px;}
+.buildlog div{margin-bottom:6px;}
+.buildlog .tick{color:var(--ok);}
+.buildlog .warn{color:var(--warn);}
+.buildlog .err{color:var(--err);}
+.foot{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);}
+code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="wordmark">Video Compressor<span class="dot">.</span></div>
+    <div class="eyebrow">Mockup Index — mac-video-transfer（Electron 原生桌面版）</div>
+  </header>
+
+  <p>本頁列出 <strong>mac-video-transfer</strong> 實際實作的所有畫面線框稿。此應用是<strong>單一視窗、單頁四態</strong>的 Electron 桌面工具，沒有路由、沒有多個 HTML 頁面 —— 四個「頁面」實際上是同一個 <code>index.html</code> 依 <code>renderer.js</code> 狀態機切換顯示／隱藏的四個區塊（<code>#dropZone</code>／<code>#fileListContainer</code>／<code>#progressPanel</code>／<code>#resultsPanel</code>）。</p>
+
+  <div class="note">鐵律聲明：以下四頁皆依實際讀到的 <code>index.html</code>／<code>renderer.js</code> 內容繪製，非憑空推導。</div>
+
+  <h2 class="section">前台頁面（4）</h2>
+  <div class="grid">
+    <a class="card" href="front-dropzone.html">
+      <div class="idx">① FRONT · DROPZONE</div>
+      <h3>空狀態／拖放檔案</h3>
+      <p>尚未加入任何檔案時的初始畫面，含側邊設定欄與拖放區。</p>
+    </a>
+    <a class="card" href="front-queue.html">
+      <div class="idx">② FRONT · QUEUE</div>
+      <h3>待處理檔案清單</h3>
+      <p>已加入檔案，顯示解析度／大小／時長／預估壓縮後大小。</p>
+    </a>
+    <a class="card" href="front-progress.html">
+      <div class="idx">③ FRONT · PROGRESS</div>
+      <h3>轉檔進度</h3>
+      <p>轉檔中畫面：進度條、速度、已用時間、預估剩餘時間。</p>
+    </a>
+    <a class="card" href="front-results.html">
+      <div class="idx">④ FRONT · RESULTS</div>
+      <h3>完成結果</h3>
+      <p>轉檔完成清單，含成功／失敗兩種結果卡片與再轉功能。</p>
+    </a>
+  </div>
+
+  <h2 class="section">後台／管理頁面</h2>
+  <div class="admin-card">
+    ✗ 本專案沒有後台或管理頁面。<br>
+    架構上確認：<code>mac-video-transfer</code> 是無伺服器、無資料庫、無帳號系統的純本機桌面應用（見 <code>docs/architecture.html</code> 的 Keystone 說明）。原始碼與 HANDOFF.md／AGENTS.md／README.md 中均未見任何後台／管理介面的規劃或實作，因此誠實地不補製虛構頁面。
+  </div>
+
+  <h2 class="section">Build Log</h2>
+  <div class="buildlog">
+    <div><span class="tick">✓</span> 讀取 index.html／renderer.js／styles.css，確認四種畫面狀態與其 DOM 結構</div>
+    <div><span class="tick">✓</span> 側邊設定欄（輸出格式／編碼器／品質／音訊／解析度／目標大小／快速預設）在四態間保持一致，故每頁皆完整重繪</div>
+    <div><span class="tick">✓</span> 結果頁同時示範成功／失敗兩種卡片，對應 renderer.js 的 renderResultsList() 分支</div>
+    <div><span class="warn">▸</span> 未找到後台頁面 —— 依實情不補製</div>
+  </div>
+
+  <div class="foot">mac-video-transfer · /Users/leonalin/Code/mac-video-transfer/mockup · 產出於 2026-07-24</div>
+</div>
+</body>
+</html>
