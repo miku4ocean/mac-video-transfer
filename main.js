@@ -24,6 +24,19 @@ function getFFprobePath() {
   }
 }
 
+// 安全解析 ffprobe 回傳的 fps 分數字串（如 "25/1"、"30000/1001"），
+// 不使用 eval() 避免影片 metadata 注入風險。
+function parseFraction(str) {
+  if (!str) return NaN;
+  const parts = str.split('/');
+  if (parts.length === 2) {
+    const num = Number(parts[0]);
+    const den = Number(parts[1]);
+    return den !== 0 ? num / den : NaN;
+  }
+  return Number(str);
+}
+
 // Set FFmpeg paths after app is ready
 let ffmpegPathResolved;
 let ffprobePathResolved;
@@ -132,7 +145,7 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
           codec: videoStream.codec_name,
           width: videoStream.width,
           height: videoStream.height,
-          fps: eval(videoStream.r_frame_rate) || 30,
+          fps: parseFraction(videoStream.r_frame_rate) || 30,
           bitrate: videoStream.bit_rate
         } : null,
         audio: audioStream ? {
