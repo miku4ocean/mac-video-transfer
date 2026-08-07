@@ -126,6 +126,10 @@ ipcMain.handle('save-file-dialog', async (event, defaultName, format) => {
 
 // Get video info
 ipcMain.handle('get-video-info', async (event, filePath) => {
+  // 驗證檔案存在後再呼叫 ffprobe，避免無意義的子行程 spawn + 難讀錯誤訊息
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error(`檔案不存在或路徑無效: ${filePath}`);
+  }
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
       if (err) {
@@ -165,10 +169,15 @@ ipcMain.handle('get-video-info', async (event, filePath) => {
 ipcMain.handle('convert-video', async (event, options) => {
   const { inputPath, outputPath, settings } = options;
 
+  // 驗證輸入檔案存在
+  if (!inputPath || !fs.existsSync(inputPath)) {
+    throw new Error(`輸入檔案不存在或路徑無效: ${inputPath}`);
+  }
+
   // First, get video info to calculate target bitrate
   const videoInfo = await new Promise((resolve, reject) => {
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
-      if (err) reject(err);
+      if (err) reject(new Error(`無法讀取影片資訊: ${err.message}`));
       else resolve(metadata);
     });
   });
