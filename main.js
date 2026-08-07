@@ -44,6 +44,7 @@ let ffprobePathResolved;
 
 let mainWindow;
 let currentProcess = null;
+let currentProcessOutputPath = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -377,15 +378,33 @@ ipcMain.handle('convert-video', async (event, options) => {
     });
 
     currentProcess = command;
+    currentProcessOutputPath = outputPath;
     command.save(outputPath);
   });
 });
 
-// Cancel conversion
+// Cancel conversion — 先 SIGTERM 給 ffmpeg 正常收尾機會，
+// 500ms 後若仍未結束則 SIGKILL 強殺；並清理殘留的不完整輸出檔。
 ipcMain.handle('cancel-conversion', () => {
   if (currentProcess) {
-    currentProcess.kill('SIGKILL');
+    const proc = currentProcess;
+    const outPath = currentProcessOutputPath;
     currentProcess = null;
+    currentProcessOutputPath = null;
+
+    proc.kill('SIGTERM');
+    setTimeout(() => {
+      try { proc.kill('SIGKILL'); } catch (_) { /* 已結束則忽略 */ }
+    }, 500);
+
+    // 清理不完整的輸出檔（延遲讓 ffmpeg 先結束）
+    setTimeout(() => {
+      if (outPath && fs.existsSync(outPath)) {
+        try { fs.unlinkSync(outPath); } catch (_) { /* 檔案可能已被刪除 */ }
+        console.log('已清理取消後的不完整輸出檔:', outPath);
+      }
+    }, 1000);
+
     return true;
   }
   return false;
