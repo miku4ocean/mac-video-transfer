@@ -456,6 +456,14 @@ async function startConversion() {
     }
 
     state.isConverting = false;
+
+    // 若取消後沒有任何結果（一個檔案都沒完成），回到檔案清單而非空結果面板
+    if (state.results.length === 0) {
+        elements.progressPanel.classList.add('hidden');
+        elements.fileListContainer.classList.remove('hidden');
+        return;
+    }
+
     showResults();
 }
 
@@ -470,6 +478,7 @@ function cancelConversion() {
 
 function showResults() {
     elements.progressPanel.classList.add('hidden');
+    elements.fileListContainer.classList.add('hidden');
     elements.resultsPanel.classList.remove('hidden');
 
     const successCount = state.results.filter(r => r.success).length;
