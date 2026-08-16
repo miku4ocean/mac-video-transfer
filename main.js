@@ -259,6 +259,14 @@ ipcMain.handle('convert-video', async (event, options) => {
       // Ensure minimum viable quality
       targetVideoBitrate = Math.max(targetVideoBitrate, minBitrate);
 
+      // 不應超過原始位元率：來源本身已經低於 50kbps 下限時（例如極小測試片段），
+      // 上面的 minBitrate floor 會把目標位元率墊到比原始還高，導致「壓縮」出
+      // 比原檔更大的檔案。這裡把目標值再夾回原始位元率以內，確保壓縮工具
+      // 不會反向讓檔案變大。
+      if (originalVideoBitrate > 0) {
+        targetVideoBitrate = Math.min(targetVideoBitrate, originalVideoBitrate);
+      }
+
       console.log(`Quality mode: ${qualityPercent}%`);
       console.log(`Original bitrate: ${(originalVideoBitrate / 1000).toFixed(0)} kbps`);
       console.log(`Target bitrate: ${(targetVideoBitrate / 1000).toFixed(0)} kbps (${qualityPercent}% of original)`);
