@@ -1,59 +1,60 @@
 {
-    "name": "mac-video-transfer",
-    "version": "1.0.0",
-    "description": "Mac Video Compressor & Converter - A powerful video compression tool using FFmpeg",
-    "main": "main.js",
-    "scripts": {
-        "start": "electron .",
-        "dev": "electron .",
-        "build": "electron-builder --mac",
-        "build:dmg": "electron-builder --mac dmg",
-        "postinstall": "electron-builder install-app-deps",
-        "test:e2e": "playwright test"
+  "name": "mac-video-transfer",
+  "version": "1.0.0",
+  "description": "Mac Video Compressor & Converter - A powerful video compression tool using FFmpeg",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "postinstall": "electron-builder install-app-deps",
+    "test:e2e": "playwright test",
+    "test": "npx playwright test"
+  },
+  "keywords": [
+    "video",
+    "converter",
+    "compressor",
+    "ffmpeg",
+    "electron",
+    "mac"
+  ],
+  "author": "miku4ocean",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.62.0"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "build": {
+    "appId": "com.miku4ocean.mac-video-transfer",
+    "productName": "Video Compressor",
+    "mac": {
+      "category": "public.app-category.video",
+      "icon": "assets/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
-    "keywords": [
-        "video",
-        "converter",
-        "compressor",
-        "ffmpeg",
-        "electron",
-        "mac"
+    "files": [
+      "**/*",
+      "!node_modules/**/README*",
+      "!node_modules/**/CHANGELOG*"
     ],
-    "author": "miku4ocean",
-    "license": "MIT",
-    "devDependencies": {
-        "@playwright/test": "^1.62.0",
-        "electron": "^44.3.0",
-        "electron-builder": "^26.15.3",
-        "playwright": "^1.62.0"
-    },
-    "dependencies": {
-        "ffmpeg-static": "^5.2.0",
-        "ffprobe-static": "^3.1.0",
-        "fluent-ffmpeg": "^2.1.2"
-    },
-    "build": {
-        "appId": "com.miku4ocean.mac-video-transfer",
-        "productName": "Video Compressor",
-        "mac": {
-            "category": "public.app-category.video",
-            "icon": "assets/icon.icns",
-            "target": [
-                "dmg",
-                "zip"
-            ]
-        },
-        "files": [
-            "**/*",
-            "!node_modules/**/README*",
-            "!node_modules/**/CHANGELOG*"
-        ],
-        "asarUnpack": [
-            "node_modules/ffmpeg-static/**/*",
-            "node_modules/ffprobe-static/**/*"
-        ],
-        "directories": {
-            "output": "dist"
-        }
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**/*",
+      "node_modules/ffprobe-static/**/*"
+    ],
+    "directories": {
+      "output": "dist"
     }
+  }
 }
