@@ -39,6 +39,7 @@
     "mac": {
       "category": "public.app-category.video",
       "icon": "assets/icon.icns",
+      "identity": null,
       "target": [
         "dmg",
         "zip"

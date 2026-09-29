@@ -1,5 +1,34 @@
 # HANDOFF — mac-video-transfer
-更新：2026-08-16／claude
+更新：2026-09-29／claude
+
+## 2026-09-29 關窗即退出（含壓縮中關窗殺 FFmpeg）＋打包成獨立 .app（fix/mac-quit-packaging）
+- **main.js**：`window-all-closed` 改所有平台一律 `app.quit()`（原本 macOS 上被
+  `process.platform !== 'darwin'` 擋掉）；新增 `app.requestSingleInstanceLock()`，
+  拿不到鎖就 `app.quit()`，`second-instance` 時把既有視窗 restore+focus。
+- **FFmpeg 子程序清理（本輪重點）**：新增 `killCurrentFFmpegProcess()`，在
+  `window-all-closed` 與 `before-quit` 都會呼叫，SIGKILL 掉 `currentProcess`（若有）
+  並清掉不完整輸出檔——即使壓縮進行中直接關窗，也不會留下背景跑的 ffmpeg 子行程
+  或半成品檔案。原本的 `cancel-conversion` IPC（SIGTERM→500ms SIGKILL 漸進式）維持
+  不變，兩者用途不同（使用者主動取消 vs. App 退出）不衝突。
+- appId 唯一性：`package.json` build.appId 已是 `com.miku4ocean.mac-video-transfer`，
+  與其他 8 個同批專案不重複，userData（依 productName「Video Compressor」）亦唯一，
+  維持不變。無內建 server／globalShortcut／Tray，故無對應清理項。
+- **package.json**：`build.mac.identity: null`（不簽章）。
+- 新增 `tests/quit-during-compression.spec.ts`：真的啟動一次會花數秒的軟體 h265
+  壓縮，在壓縮進行中關視窗，用 `pgrep -P <Electron 主行程 pid>` 在作業系統層級
+  驗證 ffmpeg 子行程真的被殺掉、不殘留。（注意：這個測試在機器被其他併發工作
+  重度佔用 CPU 時，Electron 行程退出/debugger 中止可能明顯變慢，曾在本機 CPU
+  被其他 agent 的建置/測試佔滿時觀察到超過 30 秒未退出；機器空閒時穩定在 2-8 秒
+  內結束，故 timeout 抓 90 秒，屬環境雜訊而非程式邏輯問題。）
+- 既有 43 條測試 + 新增 1 條 = 44 條全綠。
+- 打包：`CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64`
+  → `dist/mac-arm64/Video Compressor.app`（未簽章，僅本機驗證用；不產 DMG/zip）；
+  `ffmpeg-static`/`ffprobe-static` 二進位確認正確落在 `app.asar.unpacked/`。
+- 驗收：`quit-check.mjs` RESULT PASS；`open` → `pgrep` 有程序 → `osascript quit`
+  → 3 秒後 `pgrep` 為空；並存驗證：與另一個獨立 App（image-viewer-ocr 的
+  `Image Viewer OCR.app`）同時開著，關閉本 App 不影響對方存活（對方 4 個程序不動）。
+- 未做：HANDOFF 既有「下一步」的 npm audit 漏洞評估、Target Size 模式壓縮品質測試
+  覆蓋，屬既有技術債，非本輪關窗/打包範圍，未動。
 
 ## 目前目標
 提供 Mac 本機 Electron 影片壓縮工具，讓使用者拖入影片後以 FFmpeg 壓縮輸出。
