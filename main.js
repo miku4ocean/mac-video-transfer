@@ -46,6 +46,38 @@ let mainWindow;
 let currentProcess = null;
 let currentProcessOutputPath = null;
 
+// 單一實例鎖：拿不到鎖代表已有一份在跑，直接退出；
+// 讓已存在的視窗 restore + focus，不留第二個常駐程序。
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+// 中止進行中的 FFmpeg 子程序（若有），並清理不完整輸出檔。
+// 供 before-quit（含壓縮中關窗）與 cancel-conversion IPC 共用。
+function killCurrentFFmpegProcess() {
+  if (!currentProcess) return;
+  const proc = currentProcess;
+  const outPath = currentProcessOutputPath;
+  currentProcess = null;
+  currentProcessOutputPath = null;
+
+  try { proc.kill('SIGKILL'); } catch (_) { /* 已結束則忽略 */ }
+
+  if (outPath && fs.existsSync(outPath)) {
+    try { fs.unlinkSync(outPath); } catch (_) { /* 檔案可能已被刪除 */ }
+    console.log('已清理退出時的不完整輸出檔:', outPath);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -68,30 +100,37 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  // Set FFmpeg paths
-  ffmpegPathResolved = getFFmpegPath();
-  ffprobePathResolved = getFFprobePath();
-  ffmpeg.setFfmpegPath(ffmpegPathResolved);
-  ffmpeg.setFfprobePath(ffprobePathResolved);
+if (gotSingleInstanceLock) {
+  app.whenReady().then(() => {
+    // Set FFmpeg paths
+    ffmpegPathResolved = getFFmpegPath();
+    ffprobePathResolved = getFFprobePath();
+    ffmpeg.setFfmpegPath(ffmpegPathResolved);
+    ffmpeg.setFfprobePath(ffprobePathResolved);
 
-  console.log('FFmpeg path:', ffmpegPathResolved);
-  console.log('FFprobe path:', ffprobePathResolved);
+    console.log('FFmpeg path:', ffmpegPathResolved);
+    console.log('FFprobe path:', ffprobePathResolved);
 
-  createWindow();
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
-  }
-});
+  });
+
+  // 關窗即整個 App 退出，所有平台一致；退出前先中止進行中的 FFmpeg
+  // 子程序（即使壓縮進行中關窗，也不留殘留的 ffmpeg 行程或半成品檔案）。
+  app.on('window-all-closed', () => {
+    killCurrentFFmpegProcess();
+    app.quit();
+  });
+
+  app.on('before-quit', () => {
+    killCurrentFFmpegProcess();
+  });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+}
 
 // IPC Handlers
 

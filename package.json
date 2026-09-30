@@ -10,7 +10,8 @@
     "build:dmg": "electron-builder --mac dmg",
     "postinstall": "electron-builder install-app-deps",
     "test:e2e": "playwright test",
-    "test": "npx playwright test"
+    "test": "npx playwright test",
+    "test:packaged": "node tests/packaged-smoke.mjs"
   },
   "keywords": [
     "video",
@@ -39,6 +40,7 @@
     "mac": {
       "category": "public.app-category.video",
       "icon": "assets/icon.icns",
+      "identity": null,
       "target": [
         "dmg",
         "zip"

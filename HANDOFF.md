@@ -1,5 +1,57 @@
 # HANDOFF — mac-video-transfer
-更新：2026-08-16／claude
+更新：2026-10-01／claude
+
+## 2026-10-01 打包版真的能用（自動化補齊「仍需人工」第一項）
+- 新增 `tests/packaged-smoke.mjs`（`npm run test:packaged`，可傳 `.app` 路徑參數，
+  預設檢查 `~/Applications/Mac工具/Video Compressor.app`）：對**打包後的 .app**（不是
+  開發模式 `electron .`）用 `_electron.launch({ executablePath })` 啟動，透過
+  preload 暴露的 `window.api`（IPC，正常使用者流程會走的同一條路）呼叫
+  `getVideoInfo()`／`convertVideo()`，真的壓縮一段用 `ffmpeg -f lavfi testsrc` 產生的
+  3 秒測試影片。
+- 驗證結果：對 `~/Applications/Mac工具/Video Compressor.app` 連跑兩次皆 `RESULT PASS`——
+  輸出檔存在、ffprobe 可讀出正確時長與視訊軌、quality=70% 設定下輸出檔確實比來源小、
+  `app.asar.unpacked/node_modules/{ffmpeg,ffprobe}-static` 二進位存在且可執行。
+  **沒有發現 bug**：packaged 環境下 FFmpeg/FFprobe 路徑解析（`getFFmpegPath()`/
+  `getFFprobePath()` 的 `app.asar → app.asar.unpacked` 轉換）運作正常，因此本輪
+  **未修改 main.js/preload.js，未重新打包，未替換 ~/Applications 內的安裝**。
+- 踩坑記錄（已在腳本註解說明，供下次寫類似測試參考）：一開始想額外用擷取
+  main process stdout 的方式核對「FFmpeg path:」log 是否印出 `app.asar.unpacked`，
+  但 `electron.launch({executablePath})` 對 packaged app 的早期 console.log 有時會在
+  我們掛上 `'data'` listener 前就被 Playwright 驅動層消耗掉（純粹是擷取時序問題，
+  在同專案既有 dev-mode 測試〔`electron-app.spec.ts`〕用同一招是穩定的，但對
+  packaged executablePath 啟動不穩）。改成直接查驗檔案系統（`app.asar.unpacked`
+  內二進位是否存在且可執行）＋端到端的真實轉檔成功（路徑錯的話 ffmpeg 子行程會
+  ENOENT，convert-video 會 reject）雙重佐證，不依賴 log 擷取時序。
+- 既有 44 條 Playwright 測試（`npm test`）不受影響，跑過一次仍 44 passed。
+
+## 2026-09-29 關窗即退出（含壓縮中關窗殺 FFmpeg）＋打包成獨立 .app（fix/mac-quit-packaging）
+- **main.js**：`window-all-closed` 改所有平台一律 `app.quit()`（原本 macOS 上被
+  `process.platform !== 'darwin'` 擋掉）；新增 `app.requestSingleInstanceLock()`，
+  拿不到鎖就 `app.quit()`，`second-instance` 時把既有視窗 restore+focus。
+- **FFmpeg 子程序清理（本輪重點）**：新增 `killCurrentFFmpegProcess()`，在
+  `window-all-closed` 與 `before-quit` 都會呼叫，SIGKILL 掉 `currentProcess`（若有）
+  並清掉不完整輸出檔——即使壓縮進行中直接關窗，也不會留下背景跑的 ffmpeg 子行程
+  或半成品檔案。原本的 `cancel-conversion` IPC（SIGTERM→500ms SIGKILL 漸進式）維持
+  不變，兩者用途不同（使用者主動取消 vs. App 退出）不衝突。
+- appId 唯一性：`package.json` build.appId 已是 `com.miku4ocean.mac-video-transfer`，
+  與其他 8 個同批專案不重複，userData（依 productName「Video Compressor」）亦唯一，
+  維持不變。無內建 server／globalShortcut／Tray，故無對應清理項。
+- **package.json**：`build.mac.identity: null`（不簽章）。
+- 新增 `tests/quit-during-compression.spec.ts`：真的啟動一次會花數秒的軟體 h265
+  壓縮，在壓縮進行中關視窗，用 `pgrep -P <Electron 主行程 pid>` 在作業系統層級
+  驗證 ffmpeg 子行程真的被殺掉、不殘留。（注意：這個測試在機器被其他併發工作
+  重度佔用 CPU 時，Electron 行程退出/debugger 中止可能明顯變慢，曾在本機 CPU
+  被其他 agent 的建置/測試佔滿時觀察到超過 30 秒未退出；機器空閒時穩定在 2-8 秒
+  內結束，故 timeout 抓 90 秒，屬環境雜訊而非程式邏輯問題。）
+- 既有 43 條測試 + 新增 1 條 = 44 條全綠。
+- 打包：`CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --arm64`
+  → `dist/mac-arm64/Video Compressor.app`（未簽章，僅本機驗證用；不產 DMG/zip）；
+  `ffmpeg-static`/`ffprobe-static` 二進位確認正確落在 `app.asar.unpacked/`。
+- 驗收：`quit-check.mjs` RESULT PASS；`open` → `pgrep` 有程序 → `osascript quit`
+  → 3 秒後 `pgrep` 為空；並存驗證：與另一個獨立 App（image-viewer-ocr 的
+  `Image Viewer OCR.app`）同時開著，關閉本 App 不影響對方存活（對方 4 個程序不動）。
+- 未做：HANDOFF 既有「下一步」的 npm audit 漏洞評估、Target Size 模式壓縮品質測試
+  覆蓋，屬既有技術債，非本輪關窗/打包範圍，未動。
 
 ## 目前目標
 提供 Mac 本機 Electron 影片壓縮工具，讓使用者拖入影片後以 FFmpeg 壓縮輸出。
@@ -32,12 +84,15 @@
   4. **取消後雙面板**（renderer.js）：showResults 防禦性隱藏 fileListContainer；取消無結果時回檔案清單
   5. **取消清理**（main.js）：改 SIGTERM→500ms SIGKILL 漸進式終止，並清除不完整輸出檔
 - 仍需人工（測試無法自動化的部分）：
-  - 打包版（`npm run build:dmg`）安裝後，FFmpeg/FFprobe 路徑解析在真正 packaged 環境下的行為
+  - ~~打包版安裝後，FFmpeg/FFprobe 路徑解析在真正 packaged 環境下的行為~~ ──
+    **2026-10-01 已自動化**，見上方同日條目（`npm run test:packaged`）
   - 真正用滑鼠把 Finder 中的檔案拖到視窗上（OS 級拖放手勢本身）
   - 硬體加速編碼器（h265_hw/h264_hw, VideoToolbox）在其他 Mac 機型上的相容性
 
 ## 下一步（接手的人從這裡開始）
-1. 若要驗證打包版：`npm run build:dmg`，安裝後確認 FFmpeg 路徑 fix（9866ac1）在打包環境仍正確
+1. ~~若要驗證打包版：`npm run build:dmg`，安裝後確認 FFmpeg 路徑 fix（9866ac1）在打包環境仍正確~~ ──
+   **2026-10-01 已有 `npm run test:packaged` 自動驗證**（用真實 `electron-builder --dir` 產物，
+   不需要另外 `build:dmg`）
 2. `npm audit` 漏洞評估（electron-builder / playwright 開發期依賴為主），暫不影響本機使用
 3. 跑測試：`npm run test:e2e`（或 `npx playwright test`），目前 43 個測試
 4. Target Size 模式（main.js L208-245）尚未被壓縮品質測試覆蓋到，且沒有套用
