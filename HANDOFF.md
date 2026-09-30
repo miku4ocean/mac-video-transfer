@@ -1,5 +1,28 @@
 # HANDOFF — mac-video-transfer
-更新：2026-09-29／claude
+更新：2026-10-01／claude
+
+## 2026-10-01 打包版真的能用（自動化補齊「仍需人工」第一項）
+- 新增 `tests/packaged-smoke.mjs`（`npm run test:packaged`，可傳 `.app` 路徑參數，
+  預設檢查 `~/Applications/Mac工具/Video Compressor.app`）：對**打包後的 .app**（不是
+  開發模式 `electron .`）用 `_electron.launch({ executablePath })` 啟動，透過
+  preload 暴露的 `window.api`（IPC，正常使用者流程會走的同一條路）呼叫
+  `getVideoInfo()`／`convertVideo()`，真的壓縮一段用 `ffmpeg -f lavfi testsrc` 產生的
+  3 秒測試影片。
+- 驗證結果：對 `~/Applications/Mac工具/Video Compressor.app` 連跑兩次皆 `RESULT PASS`——
+  輸出檔存在、ffprobe 可讀出正確時長與視訊軌、quality=70% 設定下輸出檔確實比來源小、
+  `app.asar.unpacked/node_modules/{ffmpeg,ffprobe}-static` 二進位存在且可執行。
+  **沒有發現 bug**：packaged 環境下 FFmpeg/FFprobe 路徑解析（`getFFmpegPath()`/
+  `getFFprobePath()` 的 `app.asar → app.asar.unpacked` 轉換）運作正常，因此本輪
+  **未修改 main.js/preload.js，未重新打包，未替換 ~/Applications 內的安裝**。
+- 踩坑記錄（已在腳本註解說明，供下次寫類似測試參考）：一開始想額外用擷取
+  main process stdout 的方式核對「FFmpeg path:」log 是否印出 `app.asar.unpacked`，
+  但 `electron.launch({executablePath})` 對 packaged app 的早期 console.log 有時會在
+  我們掛上 `'data'` listener 前就被 Playwright 驅動層消耗掉（純粹是擷取時序問題，
+  在同專案既有 dev-mode 測試〔`electron-app.spec.ts`〕用同一招是穩定的，但對
+  packaged executablePath 啟動不穩）。改成直接查驗檔案系統（`app.asar.unpacked`
+  內二進位是否存在且可執行）＋端到端的真實轉檔成功（路徑錯的話 ffmpeg 子行程會
+  ENOENT，convert-video 會 reject）雙重佐證，不依賴 log 擷取時序。
+- 既有 44 條 Playwright 測試（`npm test`）不受影響，跑過一次仍 44 passed。
 
 ## 2026-09-29 關窗即退出（含壓縮中關窗殺 FFmpeg）＋打包成獨立 .app（fix/mac-quit-packaging）
 - **main.js**：`window-all-closed` 改所有平台一律 `app.quit()`（原本 macOS 上被
@@ -61,12 +84,15 @@
   4. **取消後雙面板**（renderer.js）：showResults 防禦性隱藏 fileListContainer；取消無結果時回檔案清單
   5. **取消清理**（main.js）：改 SIGTERM→500ms SIGKILL 漸進式終止，並清除不完整輸出檔
 - 仍需人工（測試無法自動化的部分）：
-  - 打包版（`npm run build:dmg`）安裝後，FFmpeg/FFprobe 路徑解析在真正 packaged 環境下的行為
+  - ~~打包版安裝後，FFmpeg/FFprobe 路徑解析在真正 packaged 環境下的行為~~ ──
+    **2026-10-01 已自動化**，見上方同日條目（`npm run test:packaged`）
   - 真正用滑鼠把 Finder 中的檔案拖到視窗上（OS 級拖放手勢本身）
   - 硬體加速編碼器（h265_hw/h264_hw, VideoToolbox）在其他 Mac 機型上的相容性
 
 ## 下一步（接手的人從這裡開始）
-1. 若要驗證打包版：`npm run build:dmg`，安裝後確認 FFmpeg 路徑 fix（9866ac1）在打包環境仍正確
+1. ~~若要驗證打包版：`npm run build:dmg`，安裝後確認 FFmpeg 路徑 fix（9866ac1）在打包環境仍正確~~ ──
+   **2026-10-01 已有 `npm run test:packaged` 自動驗證**（用真實 `electron-builder --dir` 產物，
+   不需要另外 `build:dmg`）
 2. `npm audit` 漏洞評估（electron-builder / playwright 開發期依賴為主），暫不影響本機使用
 3. 跑測試：`npm run test:e2e`（或 `npx playwright test`），目前 43 個測試
 4. Target Size 模式（main.js L208-245）尚未被壓縮品質測試覆蓋到，且沒有套用
